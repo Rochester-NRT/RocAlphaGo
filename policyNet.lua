@@ -1,5 +1,7 @@
 require 'torch';
 require 'nn';
+require 'cunn';
+
 -- @param k := depth of feature maps for hidden layers. AlphaGo used k=192.
 k = 192
 
@@ -19,5 +21,7 @@ end
 -- layer 13
 net:add(nn.SpatialConvolution(k, 1, 1, 1))   -- convolve. #filters = 1, size = 1x1, stride = 1x1
 net:add(nn.SoftMax())
+
+net = net:cuda() -- put it on GPU
 
 print(net:__tostring())

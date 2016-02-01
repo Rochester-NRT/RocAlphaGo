@@ -1,5 +1,7 @@
 require 'torch';
 require 'nn';
+require 'cunn';
+
 -- @param k := depth of feature maps for hidden layers. AlphaGo used k=192.
 k = 192
 
@@ -23,5 +25,7 @@ net:add(nn.Linear(19*19,256))
 net:add(nn.ReLU())
 net:add(nn.Linear(256,1))
 net:add(nn.Tanh())
+
+net = net:cuda() -- put it on GPU
 
 print(net:__tostring())
