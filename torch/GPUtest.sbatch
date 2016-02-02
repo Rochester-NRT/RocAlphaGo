@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 1
 #SBATCH --mem-per-cpu=4gb
-#SBATCH -o /gpfs/fs1/home/ttrine/Documents/AlphaGoReplication/GPUtest.out
+#SBATCH -o /gpfs/fs1/home/ttrine/Documents/AlphaGoReplication/torch/GPUtest.out
 #SBATCH --gres=gpu:1
 
 module load torch
