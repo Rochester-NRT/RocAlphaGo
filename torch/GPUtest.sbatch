@@ -12,6 +12,7 @@
 module load torch
 module load cuda/7.5
 
-#run the scripts
-luajit policyNet.lua
-luajit valueNet.lua
+#each script below should print its model architecture
+luajit p_pi.lua
+luajit p_sigma.lua
+luajit v_theta.lua
