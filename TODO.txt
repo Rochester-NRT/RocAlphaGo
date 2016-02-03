@@ -1,3 +1,4 @@
 TODO
 
-- Finish torch/p_pi.lua
+- What is the architecture of p_pi?
+- Write conversion utils
