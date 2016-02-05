@@ -1,11 +1,16 @@
 TODO
 
-
 - Data
   - game_converter.py
-    - Fix 3D representation of board state over time
-    - Add feature depth to each board state
-    - Equip for batch processing
+    - Options (if name = main)
+      - Folder to convert
+      - Target format (deep vs shallow vs value)
+    - Missing functionality
+      - Add routine to check for captured stones and update features accordingly
+      - Add complete feature spec to board state
+  - How to store processed files?
+
 - Neural nets
+  - Implement net architectures in Keras
   - Write training routines
   - Implement p_pi
