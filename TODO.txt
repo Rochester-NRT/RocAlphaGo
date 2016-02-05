@@ -1,16 +1,11 @@
 TODO
 
-- Data
-  - game_converter.py
-    - Options (if name = main)
-      - Folder to convert
-      - Target format (deep vs shallow vs value)
-    - Missing functionality
-      - Add routine to check for captured stones and update features accordingly
-      - Add complete feature spec to board state
+- game_converter.py
+  - Implement target_format
+  - Check for captured stones and update features accordingly
+  - Complete feature processing
   - How to store processed files?
 
 - Neural nets
   - Implement net architectures in Keras
   - Write training routines
-  - Implement p_pi
