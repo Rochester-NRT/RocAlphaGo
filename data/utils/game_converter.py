@@ -4,13 +4,13 @@ import game_logic as gl
 from sgflib.sgflib import SGFParser, GameTreeEndError
 
 class game_converter:
-    def __init__(self,target_format):
+    def __init__(self,target_format="deep"):
         self.index_at = {'a':0,'b':1,'c':2,'d':3,
                          'e':4,'f':5,'g':6,'h':7,
                          'i':8,'j':9,'k':10,'l':11,
                          'm':12,'n':13,'o':14,'p':15,
                          'q':16,'r':17,'s':18}
-        self.target_format = target_format
+        self.target_format = target_format # todo: implement this
 
     # convert move into board indices
     def parse_raw_move(self,raw_move):
@@ -104,4 +104,5 @@ if __name__ == '__main__':
         # sample[0] is the state  (48x19x19 feature tensor)
         # sample[1] is the action (19x19 class label)
         # write to args.outfolder
-        pass
+        x = sample[0]
+    print np.sum(x[0:2].astype(int),axis=0)
