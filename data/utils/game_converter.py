@@ -15,15 +15,16 @@ class game_converter:
     # convert move into board indices
     def parse_raw_move(self,raw_move):
         pos = list(str(raw_move)[3:5])
-        row = self.index_at[pos[0]]
-        col = self.index_at[pos[1]]
-        return {'row':row,'col':col}
+        col = self.index_at[pos[0]]
+        row = self.index_at[pos[1]]
+        move = {'col':col,'row':row}
+        return move
 
     # convert indices into 19x19 training label
     def encode_label(self,move):
         # convert move to one-hot encoding
         one_hot = np.zeros((19,19),dtype=bool)
-        one_hot[move['row']][move['col']] = 1
+        one_hot[move['col']][move['row']] = 1
         return one_hot
 
     # prepare training sample
@@ -46,8 +47,8 @@ class game_converter:
             states.append(state)
 
         # perform move
-        state[0][move['row']][move['col']] = 1
-        state[2][move['row']][move['col']] = 0
+        state[0][move['col']][move['row']] = 1
+        state[2][move['col']][move['row']] = 0
 
         # compute feature slices based on game logic
         gl.check_for_capture(state[0:2])
@@ -82,6 +83,7 @@ class game_converter:
     def batch_convert(self,folder_path):
         file_names = os.listdir(folder_path)
         for file_name in file_names:
+            print file_name
             training_samples = self.convert_game(os.path.join(folder_path,file_name))
             for sample in training_samples:
                 yield sample
@@ -104,5 +106,5 @@ if __name__ == '__main__':
         # sample[0] is the state  (48x19x19 feature tensor)
         # sample[1] is the action (19x19 class label)
         # write to args.outfolder
-        x = sample[0]
-    print np.sum(x[0:2].astype(int),axis=0)
+        x,y = sample
+    print np.sum(x[4:12].astype(int),axis=0)

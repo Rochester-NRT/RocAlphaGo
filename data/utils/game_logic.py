@@ -52,13 +52,13 @@ def update_future_liberties(stones, move, future_liberties):
     color = stones[move['row']][move['col']]
 
     q=0 #liberty count
-    if stones[move['row']+1][move['col']] == 0：
+    if stones[move['row']+1][move['col']] == 0:
         q = q + 1
-    if stones[move['row']][move['col']+1] == 0：
+    if stones[move['row']][move['col']+1] == 0:
         q = q + 1
-    if move['row']-1 > 0 and stones[move['row']-1][move['col']] == 0：
+    if move['row']-1 > 0 and stones[move['row']-1][move['col']] == 0:
         q = q + 1
-    if move['col'] -1 > 0 and stones[move['row']][move['col'] -1 ] == 0：
+    if move['col'] -1 > 0 and stones[move['row']][move['col'] -1 ] == 0:
         q = q + 1
 
     future_liberties[q][move['row']][move['col']] = 1
