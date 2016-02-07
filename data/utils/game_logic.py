@@ -44,8 +44,25 @@ def update_self_atari_sizes(stones,self_ataris):
 
 # @param future_liberties: 8x19x19 boolean:
 ### An index of a slice is 1 iff playing a move there would yield that many liberties.
-def update_future_liberties(stones,future_liberties):
-    pass
+# @param stones: 19x19 board consist of [0,1,2] denote [empty, black, white]
+# @param move: dict containing the row,col index of the most recent move.
+
+def update_future_liberties(stones, move, future_liberties):
+    # Getting the color of the new move
+    color = stones[move['row']][move['col']]
+
+    q=0 #liberty count
+    if stones[move['row']+1][move['col']] == 0：
+        q = q + 1
+    if stones[move['row']][move['col']+1] == 0：
+        q = q + 1
+    if move['row']-1 > 0 and stones[move['row']-1][move['col']] == 0：
+        q = q + 1
+    if move['col'] -1 > 0 and stones[move['row']][move['col'] -1 ] == 0：
+        q = q + 1
+
+    future_liberties[q][move['row']][move['col']] = 1
+
 
 # @param ladder_captures: 19x19 boolean:
 ### An index is 1 iff playing a move there would be a successful ladder capture.
