@@ -27,25 +27,81 @@ def update_move_ages(ages,move):
 def check_for_capture(stones):
     pass
 
-# @param curr_liberties: 8x19x19 boolean:
+# @param stones: 19x19 board consist of [0,1,2] denote [empty, black, white]
+# Output: curr_liberties: 8x19x19 boolean:
 ### An index of a slice is 1 iff the position has that many liberties.
 def update_current_liberties(stones):
-    # Scanning through the board
+    # Function to find the liberty of one stone
+    def liberty_count(i, j):
+        q=0 #liberty count
+        if stones[i+1][j] == 0:
+            q = q + 1
+        if stones[i][j+1] == 0:
+            q = q + 1
+        if i-1 > 0 and stones[i-1][j] == 0:
+            q = q + 1
+        if j -1 > 0 and stones[i][j -1 ] == 0:
+            q = q + 1
+        return q
+    # Record the liberty position
+    def liberty_pos(i, j):
+        pos=[]
+        if stones[i+1][j] == 0:
+            pos.append([i+1, j])
+        if stones[i][j+1] == 0:
+            pos.append([i, j+1])
+        if i - 1 >= 0 and stones[i-1][j] == 0:
+            pos.append([i-1, j])
+        if j - 1 >= 0 and stones[i][j-1] == 0:
+            pos.append([i, j-1])
+        return pos
+
+     # Scanning through the board
+    lib_considered=[]
     for i in range(0, 19):
         for j in range(0, 19):
+            if [i, j] == [x for x in lib_considered]:
+                continue
 
-            q=0 #liberty count
-            if stones[i][j] == 0:
-                q = q + 1
-            if stones[i][j+1] == 0:
-                q = q + 1
-            if i-1 > 0 and stones[i-1][j] == 0:
-                q = q + 1
-            if j -1 > 0 and stones[i][j -1 ] == 0:
-                q = q + 1
+            # The first position picked
+            lib_considered.append(i, j)
+            lib_set = [i, j]
+            lib_c = liberty_count(i, j)
+            lib_set.append(liberty_pos(i, j)
 
-            if q > 0:
-                curr_liberties[q-1][i][j] = 1
+            # Scanning through 4 directions to find the same color cluster
+            while stone[i][j] == stone[i][j+1]:
+                lib_set.append(liberty_pos(i, j+1))
+                lib_c = lib_c + liberty_count(i, j+1)
+                j = j + 1
+            
+            while stone[i][j] == stone[i+1][j]:
+                lib_set.append(liberty_pos(i+1, j))
+                lib_c = lib_c + liberty_count(i+1, j)
+                i = i + 1
+
+            while i - 1 >= 0 and stone[i][j] == stone[i-1][j]:
+                lib_set.append(liberty_pos(i-1, j)
+                lib_c = lib_c + liberty_count(i-1, j)
+                i = i - 1
+
+            while j - 1 >= 0 and stone[i][j] == stone[i][j-1]:
+                lib_set.append(liberty_pos(i, j-1))
+                lib_c = lib_c + liberty_count(i, j-1)
+                j = j - 1
+
+            # Combine the liberty position of the cluster found
+            lib_set = set(lib_set)
+
+            # Update onehot encoding rectangular prisim
+            if lib_c > 0 and lib_c < 8:
+                for pos in lib_set:
+                    curr_liberties[lib_c-1][pos[0]][pos[1]] = 1
+            elif lib_c >= 8:
+                for pos in lib_set:
+                    curr_liberties[7][pos[0]][pos[1]] = 1
+
+    return curr_liberties
 
 # @param capture_sizes: 8x19x19 boolean:
 ### An index of a slice is 1 iff a move there would capture that many opponents.
@@ -57,26 +113,53 @@ def update_capture_sizes(stones,capture_sizes):
 def update_self_atari_sizes(stones,self_ataris):
     pass
 
-# @param future_liberties: 8x19x19 boolean:
-### An index of a slice is 1 iff playing a move there would yield that many liberties.
 # @param stones: 19x19 board consist of [0,1,2] denote [empty, black, white]
 # @param move: dict containing the row,col index of the most recent move.
+# Output: future_liberties: 8x19x19 boolean:
+### An index of a slice is 1 iff playing a move there would yield that many liberties.
 
-def update_future_liberties(stones, move, future_liberties):
-    # Getting the color of the new move
+def update_future_liberties(stones, move):
+    # very similar to curr_liberties, only we do not scan the whole board this time
+    # Only one cluster which contains the new move is considered
+    i=move['row']
+    j=move['col']
 
-    q=0 #liberty count
-    if stones[move['row']+1][move['col']] == 0:
-        q = q + 1
-    if stones[move['row']][move['col']+1] == 0:
-        q = q + 1
-    if move['row']-1 > 0 and stones[move['row']-1][move['col']] == 0:
-        q = q + 1
-    if move['col'] -1 > 0 and stones[move['row']][move['col'] -1 ] == 0:
-        q = q + 1
+    lib_set = [i, j]
+    lib_c = liberty_count(i, j)
+    lib_set.append(liberty_pos(i, j)
 
-    if q > 0:
-        future_liberties[q-1][move['row']][move['col']] = 1
+    while stone[i][j] == stone[i][j+1]:
+        lib_set.append(liberty_pos(i, j+1))
+        lib_c = lib_c + liberty_count(i, j+1)
+        j = j + 1
+    
+    while stone[i][j] == stone[i+1][j]:
+        lib_set.append(liberty_pos(i+1, j))
+        lib_c = lib_c + liberty_count(i+1, j)
+        i = i + 1
+
+    while i - 1 >= 0 and stone[i][j] == stone[i-1][j]:
+        lib_set.append(liberty_pos(i-1, j)
+        lib_c = lib_c + liberty_count(i-1, j)
+        i = i - 1
+
+    while j - 1 >= 0 and stone[i][j] == stone[i][j-1]:
+        lib_set.append(liberty_pos(i, j-1))
+        lib_c = lib_c + liberty_count(i, j-1)
+        j = j - 1
+
+    lib_set = set(lib_set)
+
+    future_liberties = curr_liberties(stones)
+    # read the old data, and then update
+    if lib_c > 0 and lib_c < 8:
+        for pos in lib_set:
+            future_liberties[lib_c-1][pos[0]][pos[1]] = 1
+    elif lib_c >= 8:
+        for pos in lib_set:
+            future_liberties[7][pos[0]][pos[1]] = 1
+
+    return future_liberties
 
 
 # @param ladder_captures: 19x19 boolean:
