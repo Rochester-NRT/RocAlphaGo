@@ -4,7 +4,7 @@ WHITE = -1
 BLACK = +1
 EMPTY = 0
 
-class Game(object):
+class GameState(object):
 	"""State of a game of Go
 	"""
 
