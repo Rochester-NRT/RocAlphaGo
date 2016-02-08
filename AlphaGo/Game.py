@@ -70,6 +70,12 @@ class Game(object):
 		copies[7] = np.fliplr(copies[1])
 		return copies
 
+	def from_sgf(self, sgf_string):
+		raise NotImplementedError()
+
+	def to_sgf(self, sgf_string):
+		raise NotImplementedError()
+
 
 class IllegalMove(Exception):
 	pass
