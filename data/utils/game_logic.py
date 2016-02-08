@@ -29,8 +29,23 @@ def check_for_capture(stones):
 
 # @param curr_liberties: 8x19x19 boolean:
 ### An index of a slice is 1 iff the position has that many liberties.
-def update_current_liberties(stones,curr_liberties):
-    pass
+def update_current_liberties(stones):
+    # Scanning through the board
+    for i in range(0, 19):
+        for j in range(0, 19):
+
+            q=0 #liberty count
+            if stones[i][j] == 0:
+                q = q + 1
+            if stones[i][j+1] == 0:
+                q = q + 1
+            if i-1 > 0 and stones[i-1][j] == 0:
+                q = q + 1
+            if j -1 > 0 and stones[i][j -1 ] == 0:
+                q = q + 1
+
+            if q > 0:
+                curr_liberties[q-1][i][j] = 1
 
 # @param capture_sizes: 8x19x19 boolean:
 ### An index of a slice is 1 iff a move there would capture that many opponents.
@@ -49,7 +64,6 @@ def update_self_atari_sizes(stones,self_ataris):
 
 def update_future_liberties(stones, move, future_liberties):
     # Getting the color of the new move
-    color = stones[move['row']][move['col']]
 
     q=0 #liberty count
     if stones[move['row']+1][move['col']] == 0:
@@ -61,7 +75,8 @@ def update_future_liberties(stones, move, future_liberties):
     if move['col'] -1 > 0 and stones[move['row']][move['col'] -1 ] == 0:
         q = q + 1
 
-    future_liberties[q][move['row']][move['col']] = 1
+    if q > 0:
+        future_liberties[q-1][move['row']][move['col']] = 1
 
 
 # @param ladder_captures: 19x19 boolean:
