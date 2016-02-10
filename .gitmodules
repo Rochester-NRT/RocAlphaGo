@@ -1,0 +1,3 @@
+[submodule "interface/opponents/pachi/pachi"]
+	path = interface/opponents/pachi/pachi
+	url = https://github.com/pasky/pachi
