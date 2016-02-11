@@ -1,0 +1,13 @@
+TODO
+
+- game_converter.py
+  - Implement target_format
+  - Complete feature processing
+    - Include check for captured stones; update features accordingly
+  - How to store processed files?
+
+- Neural nets
+  - Double check what I have so far
+  - Implement p_pi
+  - Implement optimizers for each network
+  - Write training routines

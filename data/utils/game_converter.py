@@ -102,6 +102,9 @@ if __name__ == '__main__':
 
     converter = game_converter(target_format)
 
-    for state,action in converter.batch_convert(args.infolder):
-        # serialize and write deez guise to db
-        pass
+    for sample in converter.batch_convert(args.infolder):
+        # sample[0] is the state  (48x19x19 feature tensor)
+        # sample[1] is the action (19x19 class label)
+        # write to args.outfolder
+        x,y = sample
+    print np.sum(x[4:12].astype(int),axis=0)
