@@ -1,0 +1,19 @@
+languate: python
+python:
+- "2.7"
+# Setup anaconda
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda2/bin:$PATH
+  - conda update --yes conda
+  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
+  - sudo rm -rf /dev/shm
+  - sudo ln -s /run/shm /dev/shm
+# Install packages
+install:
+  - conda install --yes python=2.7 numpy scipy matplotlib pandas pytest h5py
+  - pip install --user --no-deps Keras==0.3.1 Theano==0.7.0
+# run unit tests
+script: python -m unittest discover
