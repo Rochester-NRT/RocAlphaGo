@@ -2,3 +2,4 @@
 *.npy
 *.h5
 *.sgf
++!tests/test_sgfs/*.sgf

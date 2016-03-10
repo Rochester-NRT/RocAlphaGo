@@ -3,5 +3,9 @@ numpy==1.10.4
 PyYAML==3.11
 scipy==0.17.0
 six==1.10.0
-Theano==0.7.0
+<<<<<<< HEAD
+Theano==0.8.0.dev0
+=======
+-e git://github.com/Theano/Theano.git@eab9cf5d594bac251df57885509394d2c52ccd1a#egg=Theano
+>>>>>>> 5c9102c2d2772b9709ca7f8b34f5593775a743cc
 wheel==0.29.0

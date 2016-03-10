@@ -32,14 +32,6 @@ class TestLiberties(unittest.TestCase):
 
 		print("curr_liberties checked")
 
-	def test_future_liberties(self):
-		print(self.s.update_future_liberties((4,4)))
-		self.assertEqual(self.s.update_future_liberties((6,5))[6][5], 9)
-		self.assertEqual(self.s.update_future_liberties((5,4))[5][4], 3)
-		self.assertEqual(self.s.update_future_liberties((4,4))[4][4], 10)
-
-		print("future_liberties checked")
-
 	def test_neighbors_edge_cases(self):
 
 		st = GameState()
