@@ -15,6 +15,8 @@ before_install:
 install:
   - conda install --yes python=2.7 numpy scipy matplotlib pandas pytest h5py
   - pip install --user --no-deps Keras==0.3.2 -e git://github.com/Theano/Theano.git#egg=Theano
-
-# run unit tests
-script: python -m unittest discover
+  - pip install --user flake8
+# run flake8 and unit tests
+script:
+  - flake8
+  - python -m unittest discover

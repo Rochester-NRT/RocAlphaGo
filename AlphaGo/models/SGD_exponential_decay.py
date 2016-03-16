@@ -2,6 +2,7 @@ from keras.optimizers import SGD
 from keras import backend as K
 import numpy as np
 
+
 class SGD_exponential_decay(SGD):
     '''Stochastic gradient descent. Same as built in SGD module, except
        the learning rate decreases as a recurrent linear function of decay,
