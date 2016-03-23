@@ -14,7 +14,8 @@ before_install:
 # Install packages
 install:
   - conda install --yes python=2.7 numpy scipy matplotlib pandas pytest h5py
-  - pip install --user --no-deps Keras==0.3.2 -e git://github.com/Theano/Theano.git#egg=Theano
+  - pip install --user --no-deps sgf==0.5 -e git://github.com/Theano/Theano.git#egg=Theano
+  - pip install --user --no-deps -e git://github.com/fchollet/keras.git#egg=keras
 
 # run unit tests
-script: python -m unittest discover
+script: THEANO_FLAGS="gcc.cxxflags='-march=core2'" python -m unittest discover

@@ -1,9 +1,9 @@
 Cython==0.23.4
 h5py==2.5.0
-Keras==0.3.2
 numpy==1.10.4
 PyYAML==3.11
 scipy==0.17.0
+sgf==0.5
 six==1.10.0
 -e git://github.com/Theano/Theano.git@eab9cf5d594bac251df57885509394d2c52ccd1a#egg=Theano
-wheel==0.29.0
+-e git://github.com/fchollet/keras.git@b0303f03ff03b23766e01efca9a0395a3341b38c#egg=keras

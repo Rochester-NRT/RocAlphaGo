@@ -222,28 +222,29 @@ class GameState(object):
 					moves.append((x,y))
 		return moves
 
-	def do_move(self, action):
-		"""Play current_player's color at (x,y)
+	def do_move(self, action, color=None):
+		"""Play stone at action=(x,y). If color is not specified, current_player is used
 
-		If it is a legal move, current_player switches to the other player
+		If it is a legal move, current_player switches to the opposite color
 		If not, an IllegalMove exception is raised
 		"""
+		color = color or self.current_player
 		if self.is_legal(action):
 			# reset ko
 			self.ko = None
 			if action is not PASS_MOVE:
 				(x,y) = action
-				self.board[x][y] = self.current_player
+				self.board[x][y] = color
 				self._update_neighbors(action)
 				
 				# check neighboring groups' liberties for captures
 				for (nx, ny) in self._neighbors(action):
-					if self.board[nx,ny] == -self.current_player and len(self.liberty_sets[nx][ny]) == 0:
+					if self.board[nx,ny] == -color and len(self.liberty_sets[nx][ny]) == 0:
 						# capture occurred!
 						captured_group = self.group_sets[nx][ny]
 						num_captured = len(captured_group)
 						self._remove_group(captured_group)
-						if self.current_player == BLACK:
+						if color == BLACK:
 							self.num_white_prisoners += num_captured
 						else:
 							self.num_black_prisoners += num_captured
@@ -258,18 +259,11 @@ class GameState(object):
 								# note: (nx,ny) is the stone that was captured
 								self.ko = (nx,ny)
 			# next turn
-			self.current_player = -self.current_player
+			self.current_player = -color
 			self.turns_played += 1
 			self.history.append(action)
 		else:
 			raise IllegalMove(str(action))
-
-	def from_sgf(self, sgf_string):
-		raise NotImplementedError()
-
-	def to_sgf(self, sgf_string):
-		raise NotImplementedError()
-
 
 class IllegalMove(Exception):
 	pass

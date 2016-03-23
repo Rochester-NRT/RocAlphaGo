@@ -217,6 +217,8 @@ class Preprocess(object):
 			if feat in FEATURES:
 				self.processors[i] = FEATURES[feat]["function"]
 				self.output_dim += FEATURES[feat]["size"]
+			else:
+				raise ValueError("uknown feature: %s" % feat)
 
 	def state_to_tensor(self, state):
 		"""Convert a GameState to a Theano-compatible tensor

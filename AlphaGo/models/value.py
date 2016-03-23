@@ -1,7 +1,7 @@
 from keras.models import Sequential
 from keras.layers import convolutional
 from keras.layers.core import Dense, Flatten
-from SGD_exponential_decay import SGD_exponential_decay as SGD
+#from SGD_exponential_decay import SGD_exponential_decay as SGD
 
 ### Parameters obtained from paper ###
 K = 152                       # depth of convolutional layers
@@ -23,8 +23,8 @@ class value_trainer:
         self.model.add(Dense(256,init='uniform'))
         self.model.add(Dense(1,init='uniform',activation="tanh"))
 
-        sgd = SGD(lr=LEARNING_RATE, decay=DECAY)
-        self.model.compile(loss='mean_squared_error', optimizer=sgd)
+        #sgd = SGD(lr=LEARNING_RATE, decay=DECAY)
+        #self.model.compile(loss='mean_squared_error', optimizer=sgd)
 
     def get_samples(self):
         # TODO non-terminating loop that draws training samples uniformly at random

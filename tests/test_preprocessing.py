@@ -1,4 +1,4 @@
-from AlphaGo.models.preprocessing import Preprocess
+from AlphaGo.preprocessing.preprocessing import Preprocess
 import AlphaGo.go as go
 import numpy as np
 import unittest
@@ -105,13 +105,13 @@ class TestPreprocessingFeatures(unittest.TestCase):
 		one_hot_liberties = np.zeros((gs.size, gs.size, 8))
 		# black piece at (4,4) has a single liberty: (4,3)
 		one_hot_liberties[4,4,0] = 1
-		
+
 		# the black group in the top left corner has 2 liberties
 		one_hot_liberties[0,0:3,1] = 1
 		# 	.. as do the white pieces on the left and right of the eye
 		one_hot_liberties[3,4,1] = 1
 		one_hot_liberties[5,4,1] = 1
-		
+
 		# the white group in the top left corner has 3 liberties
 		one_hot_liberties[1,0:2,2] = 1
 		# 	...as does the white piece at (4,5)
@@ -119,7 +119,7 @@ class TestPreprocessingFeatures(unittest.TestCase):
 		# 	...and the black pieces on the sides of the eye
 		one_hot_liberties[3,3,2] = 1
 		one_hot_liberties[5,3,2] = 1
-		
+
 		# the black piece at (4,2) has 4 liberties
 		one_hot_liberties[4,2,3] = 1
 
@@ -132,7 +132,7 @@ class TestPreprocessingFeatures(unittest.TestCase):
 		gs = simple_board()
 		pp = Preprocess(["capture_size"])
 		feature = pp.state_to_tensor(gs)[0].transpose((1,2,0))
-		
+
 		one_hot_capture = np.zeros((gs.size, gs.size, 8))
 		# there is no capture available; all legal moves are zero-capture
 		for (x,y) in gs.get_legal_moves():
@@ -156,7 +156,7 @@ class TestPreprocessingFeatures(unittest.TestCase):
 		feature = pp.state_to_tensor(gs)[0].transpose((1,2,0))
 
 		one_hot_liberties = np.zeros((gs.size, gs.size, 8))
-		
+
 		# TODO (?) hand-code?
 		for (x,y) in gs.get_legal_moves():
 			copy = gs.copy()

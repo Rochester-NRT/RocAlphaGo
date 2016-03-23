@@ -3,7 +3,7 @@ from keras.models import model_from_json
 from keras.layers import convolutional
 from keras.layers.core import Activation, Reshape
 import keras.backend as K
-from preprocessing import Preprocess
+from AlphaGo.preprocessing.preprocessing import Preprocess
 import json
 
 class CNNPolicy(object):
@@ -43,7 +43,7 @@ class CNNPolicy(object):
 		"""Given a stream of states in state_gen, evaluates them in batches
 		to make best use of GPU resources.
 
-		Returns: TBD (stream of results? that would break zip(). 
+		Returns: TBD (stream of results? that would break zip().
 			streaming pairs of pre-zipped (state, result)?)
 		"""
 		raise NotImplementedError()
@@ -70,7 +70,7 @@ class CNNPolicy(object):
 		- board:             width of the go board to be processed (default 19)
 		- filters_per_layer: number of filters used on every layer (default 128)
 		- layers:            number of convolutional steps (default 12)
-		- filter_width_K:    (where K is between 1 and <layers>) width of filter on 
+		- filter_width_K:    (where K is between 1 and <layers>) width of filter on
 							 layer K (default 3 except 1st layer which defaults to 5).
 							 Must be odd.
 		"""
@@ -141,7 +141,7 @@ class CNNPolicy(object):
 		"""write the network model and preprocessing features to the specified file
 		"""
 		# this looks odd because we are serializing a model with json as a string
-		# then making that the value of an object which is then serialized as 
+		# then making that the value of an object which is then serialized as
 		# json again.
 		# It's not as crazy as it looks. A CNNPolicy has 2 moving parts - the
 		# feature preprocessing and the neural net, each of which gets a top-level
