@@ -1,6 +1,8 @@
 import sgf
-import string
 from AlphaGo import go
+
+# for board location indexing
+letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
 def _parse_sgf_move(node_value):
@@ -9,8 +11,8 @@ def _parse_sgf_move(node_value):
 	if node_value == '' or node_value == 'tt':
 		return go.PASS_MOVE
 	else:
-		row = string.letters.index(node_value[1])
-		col = string.letters.index(node_value[0])
+		row = letters.index(node_value[1].upper())
+		col = letters.index(node_value[0].upper())
 		# GameState expects (x, y) where x is column and y is row
 		return (col, row)
 

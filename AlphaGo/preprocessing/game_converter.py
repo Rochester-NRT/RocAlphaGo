@@ -88,12 +88,12 @@ class game_converter:
 			file_offsets = h5f.require_group('file_offsets')
 
 			if verbose:
-				print "created HDF5 dataset in", tmp_file
+				print("created HDF5 dataset in {}".format(tmp_file))
 
 			next_idx = 0
 			for file_name in sgf_files:
 				if verbose:
-					print file_name
+					print(file_name)
 				# count number of state/action pairs yielded by this game
 				n_pairs = 0
 				file_start_idx = next_idx
@@ -115,7 +115,7 @@ class game_converter:
 				except Exception as e:
 					# catch everything else
 					if ignore_errors:
-						warnings.warn("Unkown exception with file %s\n\t%s" % (file_name, e))
+						warnings.warn("Unkown exception with file %s\n\t%s" % (file_name, e), stacklevel=2)
 					else:
 						raise e
 				finally:
@@ -124,16 +124,16 @@ class game_converter:
 						file_name_key = file_name.replace('/', ':')
 						file_offsets[file_name_key] = [file_start_idx, n_pairs]
 						if verbose:
-							print "\t%d state/action pairs extracted" % n_pairs
+							print("\t%d state/action pairs extracted" % n_pairs)
 					elif verbose:
-						print "\t-no usable data-"
+						print("\t-no usable data-")
 		except Exception as e:
-			print "sgfs_to_hdf5 failed"
+			print("sgfs_to_hdf5 failed")
 			os.remove(tmp_file)
 			raise e
 
 		if verbose:
-			print "finished. renaming %s to %s" % (tmp_file, hdf5_file)
+			print("finished. renaming %s to %s" % (tmp_file, hdf5_file))
 
 		# processing complete; rename tmp_file to hdf5_file
 		h5f.close()
@@ -180,7 +180,7 @@ def run_game_converter(cmd_line_args=None):
 		feature_list = args.features.split(",")
 
 	if args.verbose:
-		print "using features", feature_list
+		print("using features", feature_list)
 
 	converter = game_converter(feature_list)
 

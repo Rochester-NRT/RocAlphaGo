@@ -82,7 +82,7 @@ def get_capture_size(state, maximum=8):
 			# (note suicide and ko are not an issue because they are not
 			# legal moves)
 			(gx, gy) = next(iter(neighbor_group))
-			if state.liberty_counts[gx][gy] == 1:
+			if (state.liberty_counts[gx][gy] == 1) and (state.board[gx, gy] != state.current_player):
 				n_captured += len(state.group_sets[gx][gy])
 		planes[x, y, min(n_captured, maximum - 1)] = 1
 	return planes

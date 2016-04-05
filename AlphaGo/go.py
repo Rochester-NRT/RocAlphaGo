@@ -87,7 +87,7 @@ class GameState(object):
 		the given (x,y) position. Basically it handles edges and corners.
 		"""
 		(x, y) = position
-		return filter(self._on_board, [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)])
+		return [xy for xy in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] if self._on_board(xy)]
 
 	def _diagonals(self, position):
 		"""Like _neighbors but for diagonal positions
