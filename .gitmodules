@@ -1,3 +1,6 @@
 [submodule "interface/opponents/pachi/pachi"]
 	path = interface/opponents/pachi/pachi
 	url = https://github.com/pasky/pachi
+[submodule "gtp"]
+	path = gtp
+	url = git@github.com:wrongu/gtp.git
