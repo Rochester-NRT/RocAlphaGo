@@ -1,5 +1,6 @@
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.go import GameState
+import numpy as np
 import unittest
 import os
 
@@ -25,15 +26,27 @@ class TestCNNPolicy(unittest.TestCase):
 
 		model_file = 'TESTPOLICY.json'
 		weights_file = 'TESTWEIGHTS.h5'
+		model_file2 = 'TESTPOLICY2.json'
+		weights_file2 = 'TESTWEIGHTS2.h5'
 
+		# test saving model/weights separately
 		policy.save_model(model_file)
 		policy.model.save_weights(weights_file)
+		# test saving them together
+		policy.save_model(model_file2, weights_file2)
 
 		copypolicy = CNNPolicy.load_model(model_file)
 		copypolicy.model.load_weights(weights_file)
 
+		copypolicy2 = CNNPolicy.load_model(model_file2)
+
+		for w1, w2 in zip(copypolicy.model.get_weights(), copypolicy2.model.get_weights()):
+			self.assertTrue(np.all(w1 == w2))
+
 		os.remove(model_file)
 		os.remove(weights_file)
+		os.remove(model_file2)
+		os.remove(weights_file2)
 
 if __name__ == '__main__':
 	unittest.main()

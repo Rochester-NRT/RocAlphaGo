@@ -142,11 +142,16 @@ class CNNPolicy(object):
 			object_specs = json.load(f)
 		new_policy = CNNPolicy(object_specs['feature_list'])
 		new_policy.model = model_from_json(object_specs['keras_model'])
+		if 'weights_file' in object_specs:
+			new_policy.model.load_weights(object_specs['weights_file'])
 		new_policy.forward = new_policy._model_forward()
 		return new_policy
 
-	def save_model(self, json_file):
+	def save_model(self, json_file, weights_file=None):
 		"""write the network model and preprocessing features to the specified file
+
+		If a weights_file (.hdf5 extension) is also specified, model weights are also
+		saved to that file and will be reloaded automatically in a call to load_model
 		"""
 		# this looks odd because we are serializing a model with json as a string
 		# then making that the value of an object which is then serialized as
@@ -159,6 +164,9 @@ class CNNPolicy(object):
 			'keras_model': self.model.to_json(),
 			'feature_list': self.preprocessor.feature_list
 		}
+		if weights_file is not None:
+			self.model.save_weights(weights_file)
+			object_specs['weights_file'] = weights_file
 		# use the json module to write object_specs to file
 		with open(json_file, 'w') as f:
 			json.dump(object_specs, f)
