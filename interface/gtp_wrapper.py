@@ -17,8 +17,11 @@ class GTPGameConnector(object):
 
 	def make_move(self, color, vertex):
 		# vertex in GTP language is 1-indexed, whereas GameState's are zero-indexed
-		(x, y) = vertex
-		self._state.do_move((x - 1, y - 1), color)
+		if vertex == gtp.PASS:
+			self._state.do_move(go.PASS_MOVE)
+		else:
+			(x, y) = vertex
+			self._state.do_move((x - 1, y - 1), color)
 
 	def set_size(self, n):
 		self._state = go.GameState(n)
@@ -36,11 +39,21 @@ class GTPGameConnector(object):
 			return (x + 1, y + 1)
 
 
-def run_gtp(player_obj):
+def run_gtp(player_obj, inpt_fn=None):
 	gtp_game = GTPGameConnector(player_obj)
 	gtp_engine = gtp.Engine(gtp_game)
+	if inpt_fn is None:
+		inpt_fn = raw_input
 
 	while not gtp_engine.disconnect:
-		engine_reply = gtp_engine.send(raw_input())
-		sys.stdout.write(engine_reply)
-		sys.stdout.flush()
+		inpt = inpt_fn()
+		# handle either single lines at a time
+		# or multiple commands separated by '\n'
+		try:
+			cmd_list = inpt.split("\n")
+		except:
+			cmd_list = [inpt]
+		for cmd in cmd_list:
+			engine_reply = gtp_engine.send(cmd)
+			sys.stdout.write(engine_reply)
+			sys.stdout.flush()
