@@ -17,11 +17,15 @@ class GTPGameConnector(object):
 
 	def make_move(self, color, vertex):
 		# vertex in GTP language is 1-indexed, whereas GameState's are zero-indexed
-		if vertex == gtp.PASS:
-			self._state.do_move(go.PASS_MOVE)
-		else:
-			(x, y) = vertex
-			self._state.do_move((x - 1, y - 1), color)
+		try:
+			if vertex == gtp.PASS:
+				self._state.do_move(go.PASS_MOVE)
+			else:
+				(x, y) = vertex
+				self._state.do_move((x - 1, y - 1), color)
+			return True
+		except go.IllegalMove:
+			return False
 
 	def set_size(self, n):
 		self._state = go.GameState(n)
