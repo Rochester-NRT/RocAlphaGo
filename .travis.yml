@@ -14,7 +14,7 @@ before_install:
 # Install packages
 install:
   - conda install --yes python=2.7 Cython=0.24 h5py=2.6.0 numpy=1.11.0 scipy=0.17.0 PyYAML=3.11 matplotlib pandas pytest
-  - pip install --user --no-deps Theano==0.8.1 sgf==0.5 keras==1.0.0
+  - pip install --user --no-deps Theano==0.8.1 sgf==0.5 keras==1.0.0 gtp==0.2
   - pip install --user flake8
 
 # run flake8 and unit tests
