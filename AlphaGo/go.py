@@ -19,8 +19,11 @@ class GameState(object):
 		self.ko = None
 		self.komi = komi
 		self.history = []
+		self.is_end_of_game = False
 		self.num_black_prisoners = 0
 		self.num_white_prisoners = 0
+		self.komi = komi  # Komi is number of extra points WHITE gets for going 2nd
+		# Each pass move by a player subtracts a point
 		self.passes_white = 0
 		self.passes_black = 0
 		# `self.liberty_sets` is a 2D array with the same indexes as `board`
@@ -303,7 +306,6 @@ class GameState(object):
 				(x, y) = action
 				self.board[x][y] = color
 				self._update_neighbors(action)
-
 				# check neighboring groups' liberties for captures
 				for (nx, ny) in self._neighbors(action):
 					if self.board[nx, ny] == -color and len(self.liberty_sets[nx][ny]) == 0:
@@ -336,6 +338,12 @@ class GameState(object):
 			self.history.append(action)
 		else:
 			raise IllegalMove(str(action))
+		# Check for end of game
+		if len(self.history) > 1:
+			if self.history[-1] is None and self.history[-2] is None \
+				and self.current_player == WHITE:
+				self.is_end_of_game = True
+		return self.is_end_of_game
 
 
 class IllegalMove(Exception):

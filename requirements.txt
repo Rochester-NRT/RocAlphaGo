@@ -2,6 +2,7 @@ Cython==0.24
 h5py==2.6.0
 Keras==1.0.0
 numpy==1.11.0
+pygtp==0.2
 PyYAML==3.11
 scipy==0.17.0
 sgf==0.5

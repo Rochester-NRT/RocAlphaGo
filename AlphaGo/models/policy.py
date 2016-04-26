@@ -5,6 +5,7 @@ from keras.layers.core import Activation, Flatten
 import keras.backend as K
 from AlphaGo.preprocessing.preprocessing import Preprocess
 from AlphaGo.util import flatten_idx
+import numpy as np
 import json
 
 
@@ -40,14 +41,42 @@ class CNNPolicy(object):
 		# the first [0] gets the front tensor.
 		return lambda inpt: forward_function([inpt])[0]
 
-	def batch_eval_state(self, state_gen, batch=16):
-		"""Given a stream of states in state_gen, evaluates them in batches
-		to make best use of GPU resources.
-
-		Returns: TBD (stream of results? that would break zip().
-			streaming pairs of pre-zipped (state, result)?)
+	def _select_moves_and_normalize(self, nn_output, moves, size):
+		"""helper function to normalize a distribution over the given list of moves
+		and return a list of (move, prob) tuples
 		"""
-		raise NotImplementedError()
+		if len(moves) == 0:
+			return []
+		move_indices = [flatten_idx(m, size) for m in moves]
+		# get network activations at legal move locations
+		distribution = nn_output[move_indices]
+		distribution = distribution / distribution.sum()
+		return zip(moves, distribution)
+
+	def batch_eval_state(self, states, moves_lists=None):
+		"""Given a list of states, evaluates them all at once to make best use of GPU
+		batching capabilities.
+
+		Analogous to [eval_state(s) for s in states]
+
+		Returns: a parallel list of move distributions as in eval_state
+		"""
+		n_states = len(states)
+		if n_states == 0:
+			return []
+		state_size = states[0].size
+		if not all([st.size == state_size for st in states]):
+			raise ValueError("all states must have the same size")
+		# concatenate together all one-hot encoded states along the 'batch' dimension
+		nn_input = np.concatenate([self.preprocessor.state_to_tensor(s) for s in states], axis=0)
+		# pass all input through the network at once (backend makes use of batches if len(states) is large)
+		network_output = self.forward(nn_input)
+		# default move lists to all legal moves
+		moves_lists = moves_lists or [st.get_legal_moves() for st in states]
+		results = [None] * n_states
+		for i in range(n_states):
+			results[i] = self._select_moves_and_normalize(network_output[i], moves_lists[i], state_size)
+		return results
 
 	def eval_state(self, state, moves=None):
 		"""Given a GameState object, returns a list of (action, probability) pairs
@@ -56,18 +85,10 @@ class CNNPolicy(object):
 		If a list of moves is specified, only those moves are kept in the distribution
 		"""
 		tensor = self.preprocessor.state_to_tensor(state)
-
 		# run the tensor through the network
 		network_output = self.forward(tensor)
-
 		moves = moves or state.get_legal_moves()
-		move_indices = [flatten_idx(m, state.size) for m in moves]
-
-		# get network activations at legal move locations
-		# note: may not be a proper distribution by ignoring illegal moves
-		distribution = network_output[0][move_indices]
-		distribution = distribution / distribution.sum()
-		return zip(moves, distribution)
+		return self._select_moves_and_normalize(network_output[0], moves, state.size)
 
 	@staticmethod
 	def create_network(**kwargs):
@@ -142,11 +163,16 @@ class CNNPolicy(object):
 			object_specs = json.load(f)
 		new_policy = CNNPolicy(object_specs['feature_list'])
 		new_policy.model = model_from_json(object_specs['keras_model'])
+		if 'weights_file' in object_specs:
+			new_policy.model.load_weights(object_specs['weights_file'])
 		new_policy.forward = new_policy._model_forward()
 		return new_policy
 
-	def save_model(self, json_file):
+	def save_model(self, json_file, weights_file=None):
 		"""write the network model and preprocessing features to the specified file
+
+		If a weights_file (.hdf5 extension) is also specified, model weights are also
+		saved to that file and will be reloaded automatically in a call to load_model
 		"""
 		# this looks odd because we are serializing a model with json as a string
 		# then making that the value of an object which is then serialized as
@@ -159,6 +185,9 @@ class CNNPolicy(object):
 			'keras_model': self.model.to_json(),
 			'feature_list': self.preprocessor.feature_list
 		}
+		if weights_file is not None:
+			self.model.save_weights(weights_file)
+			object_specs['weights_file'] = weights_file
 		# use the json module to write object_specs to file
 		with open(json_file, 'w') as f:
 			json.dump(object_specs, f)
