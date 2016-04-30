@@ -154,7 +154,7 @@ class GameState(object):
 					# add (x,y) to the liberties of its nonempty neighbors
 					self.liberty_sets[nx][ny].add((x, y))
 					for (gx, gy) in self.group_sets[nx][ny]:
-						self.liberty_counts[gx][gy] += 1
+						self.liberty_counts[gx][gy] = len(self.liberty_sets[nx][ny])
 
 	def copy(self):
 		"""get a copy of this Game state
