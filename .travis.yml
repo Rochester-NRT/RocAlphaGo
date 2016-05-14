@@ -21,3 +21,12 @@ install:
 script:
     - flake8
     - THEANO_FLAGS="gcc.cxxflags='-march=core2'" python -m unittest discover
+    
+# MicrosoftGeekHub Service Hook
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/bb389d11efc7ff5b7364
+    on_success: change  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always

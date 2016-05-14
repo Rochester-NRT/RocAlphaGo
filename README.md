@@ -11,6 +11,11 @@ This project is a student-led replication/reference implementation of DeepMind's
 
 See the [project wiki](https://github.com/Rochester-NRT/RocAlphaGo/wiki).
 
+MicrosoftGeekHub Build Badge:
+
+[![Build Status](https://travis-ci.org/Rochester-NRT/AlphaGo.svg?branch=develop)](https://travis-ci.org/MicrosoftGeekHub/AlphaGo)
+[![Gitter](https://badges.gitter.im/MicrosoftGeekHub/AlphaGo.svg)](https://gitter.im/MicrosoftGeekHub?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 # Current project status
 
 _This is not yet a full implementation of AlphaGo_. Development is being carried out on the `develop` branch.

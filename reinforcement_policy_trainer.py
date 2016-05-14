@@ -1,21 +1,11 @@
-<<<<<<< HEAD
 ﻿import argparse
 from keras.callbacks import ModelCheckpoint
-=======
-import os
-import argparse
-import json
-import numpy as np
-from shutil import copyfile
-from keras.optimizers import SGD
->>>>>>> latest
 from AlphaGo.ai import ProbabilisticPolicyPlayer
 import AlphaGo.go as go
 from AlphaGo.go import GameState
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
 from AlphaGo.util import flatten_idx
-<<<<<<< HEAD
 from keras.optimizers import SGD
 import json
 import numpy as np
@@ -23,8 +13,6 @@ import numpy as np
 import os
 #
 # from ipdb import set_trace as BP
-=======
->>>>>>> latest
 
 
 def make_training_pairs(player, opp, features, mini_batch_size):
@@ -45,12 +33,8 @@ def make_training_pairs(player, opp, features, mini_batch_size):
 
 	def do_move(states, states_prev, moves, X_list, y_list, player_color):
 		bsize_flat = bsize * bsize
-<<<<<<< HEAD
 		for st, st_prev, mv, X, y in zip(states, states_prev, moves, X_list,
 										 y_list):
-=======
-		for st, st_prev, mv, X, y in zip(states, states_prev, moves, X_list, y_list):
->>>>>>> latest
 			if not st.is_end_of_game:
 				# Only do more moves if not end of game already
 				st.do_move(mv)
@@ -79,19 +63,12 @@ def make_training_pairs(player, opp, features, mini_batch_size):
 		# Get moves (batch)
 		moves_black = player1.get_moves(states)
 		# Do moves (black)
-<<<<<<< HEAD
 		states, X_list, y_list = do_move(states, states_prev, moves_black,
 										 X_list, y_list, player_color)
 		# Do moves (white)
 		moves_white = player2.get_moves(states)
 		states, X_list, y_list = do_move(states, states_prev, moves_white,
 										 X_list, y_list, player_color)
-=======
-		states, X_list, y_list = do_move(states, states_prev, moves_black, X_list, y_list, player_color)
-		# Do moves (white)
-		moves_white = player2.get_moves(states)
-		states, X_list, y_list = do_move(states, states_prev, moves_white, X_list, y_list, player_color)
->>>>>>> latest
 		# If all games have ended, we're done. Get winners.
 		done = [st.is_end_of_game for st in states]
 		if all(done):
@@ -106,7 +83,6 @@ def make_training_pairs(player, opp, features, mini_batch_size):
 
 def train_batch(player, X_list, y_list, winners, lr):
 	"""Given the outcomes of a mini-batch of play against a fixed opponent,
-<<<<<<< HEAD
 	   update the weights with reinforcement learning in place.
 
 	   Args:
@@ -116,20 +92,6 @@ def train_batch(player, X_list, y_list, winners, lr):
 	   winners -- List of winners corresponding to each item in
 				  training_pairs_list
 	   lr -- Keras learning rate
-=======
-		update the weights with reinforcement learning.
-
-		Args:
-		player -- player object with policy weights to be updated
-		X_list -- List of one-hot encoded states.
-		y_list -- List of one-hot encoded actions (to pair with X_list).
-		winners -- List of winners corresponding to each item in
-					training_pairs_list
-		lr -- Keras learning rate
-
-		Return:
-		player -- same player, with updated weights.
->>>>>>> latest
 	"""
 
 	for X, y, winner in zip(X_list, y_list, winners):
@@ -142,7 +104,6 @@ def train_batch(player, X_list, y_list, winners, lr):
 		player.policy.model.fit(X, y, nb_epoch=1, batch_size=len(X))
 
 
-<<<<<<< HEAD
 def run(player, args, opponents, features, model_folder):
 	# Set SGD and compile
 	sgd = SGD(lr=args.learning_rate)
@@ -184,7 +145,7 @@ def get_policy(weights_file, metapath):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Perform reinforcement learning '
 									 'to improve given policy network. Second phase of pipeline.')
-	parser.add_argument("--initial_weights", help="Path to file with weights to start from.", default="D:\\ps\\club\\Go\\weights.1sepoch0413.hdf5")
+	parser.add_argument("--initial_weights", help="Path to file with weights to start from.", default="D:\\ps\\club\\Go\\models\weights.00008.hdf5")
 	parser.add_argument("--initial_json", help="Path to file with initial network params.", default="D:\\ps\\club\\Go\\all_feat_model.json")
 	parser.add_argument("--model_folder", help="Path to folder where the model "
 						"params will be saved after each epoch. Default: None", default="d:\\ps\\club\\Go\\exp\\models")
@@ -231,109 +192,3 @@ if __name__ == '__main__':
 	else:
 		opponents = [player]
 	opponents = run(player, args, opponents, features, args.model_folder)
-=======
-def run_training(cmd_line_args=None):
-	parser = argparse.ArgumentParser(description='Perform reinforcement learning to improve given policy network. Second phase of pipeline.')
-	parser.add_argument("model_json", help="Path to policy model JSON.")
-	parser.add_argument("initial_weights", help="Path to HDF5 file with inital weights (i.e. result of supervised training).")
-	parser.add_argument("out_directory", help="Path to folder where the model params and metadata will be saved after each epoch.")
-	parser.add_argument("--learning-rate", help="Keras learning rate (Default: .03)", type=float, default=.03)
-	parser.add_argument("--policy-temp", help="Distribution temperature of players using policies (Default: 0.67)", type=float, default=0.67)
-	parser.add_argument("--save-every", help="Save policy as a new opponent every n batches (Default: 500)", type=int, default=500)
-	parser.add_argument("--game-batch", help="Number of games per mini-batch (Default: 20)", type=int, default=20)
-	parser.add_argument("--iterations", help="Number of training batches/iterations (Default: 10000)", type=int, default=10000)
-	parser.add_argument("--resume", help="Load latest weights in out_directory and resume", default=False, action="store_true")
-	parser.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")
-	# Baseline function (TODO) default lambda state: 0  (receives either file
-	# paths to JSON and weights or None, in which case it uses default baseline 0)
-	if cmd_line_args is None:
-		args = parser.parse_args()
-	else:
-		args = parser.parse_args(cmd_line_args)
-
-	ZEROTH_FILE = "weights.00000.hdf5"
-
-	if args.resume:
-		if not os.path.exists(os.path.join(args.out_directory, "metadata.json")):
-			raise ValueError("Cannot resume without existing output directory")
-
-	if not os.path.exists(args.out_directory):
-		if args.verbose:
-			print "creating output directory {}".format(args.out_directory)
-		os.makedirs(args.out_directory)
-
-	if not args.resume:
-		# make a copy of weights file, "weights.00000.hdf5" in the output directory
-		copyfile(args.initial_weights, os.path.join(args.out_directory, ZEROTH_FILE))
-		if args.verbose:
-			print "copied {} to {}".format(args.initial_weights, os.path.join(args.out_directory, ZEROTH_FILE))
-		player_weights = ZEROTH_FILE
-	else:
-		# if resuming, we expect initial_weights to be just a "weights.#####.hdf5" file, not a full path
-		args.initial_weights = os.path.join(args.out_directory, os.path.basename(args.initial_weights))
-		if not os.path.exists(args.initial_weights):
-			raise ValueError("Cannot resume; weights {} do not exist".format(args.initial_weights))
-		elif args.verbose:
-			print "Resuming with weights {}".format(args.initial_weights)
-		player_weights = os.path.basename(args.initial_weights)
-
-	# Set initial conditions
-	policy = CNNPolicy.load_model(args.model_json)
-	policy.model.load_weights(args.initial_weights)
-	player = ProbabilisticPolicyPlayer(policy, temperature=args.policy_temp)
-	features = policy.preprocessor.feature_list
-
-	# different opponents come from simply changing the weights of
-	# opponent.policy.model "behind the scenes"
-	opp_policy = CNNPolicy.load_model(args.model_json)
-	opponent = ProbabilisticPolicyPlayer(opp_policy, temperature=args.policy_temp)
-
-	if args.verbose:
-		print "created player and opponent with temperature {}".format(args.policy_temp)
-
-	if not args.resume:
-		metadata = {
-			"model_file": args.model_json,
-			"init_weights": player_weights,
-			"learning_rate": args.learning_rate,
-			"temperature": args.policy_temp,
-			"game_batch": args.game_batch,
-			"opponents": [ZEROTH_FILE],  # which weights from which to sample an opponent each batch
-			"win_ratio": {}  # map from player to tuple of (opponent, win ratio) Useful for validating in lieu of 'accuracy/loss'
-		}
-	else:
-		with open(os.path.join(args.out_directory, "metadata.json"), "r") as f:
-			metadata = json.load(f)
-
-	def save_metadata():
-		with open(os.path.join(args.out_directory, "metadata.json"), "w") as f:
-			json.dump(metadata, f)
-
-	# Set SGD and compile
-	sgd = SGD(lr=args.learning_rate)
-	player.policy.model.compile(loss='binary_crossentropy', optimizer=sgd)
-	for i_iter in xrange(1, args.iterations + 1):
-		# Train mini-batches by randomly choosing opponent from pool (possibly self)
-		# and playing game_batch games against them
-		opp_weights = np.random.choice(metadata["opponents"])
-		opp_path = os.path.join(args.out_directory, opp_weights)
-		# load new weights into opponent, but otherwise its the same
-		opponent.policy.model.load_weights(opp_path)
-		if args.verbose:
-			print "Batch {}\tsampled opponent is {}".format(i_iter, opp_weights)
-		# Make training pairs and do RL
-		X_list, y_list, winners = make_training_pairs(player, opponent, features, args.game_batch)
-		win_ratio = np.sum(np.array(winners) == 1) / float(args.game_batch)
-		metadata["win_ratio"][player_weights] = (opp_weights, win_ratio)
-		train_batch(player, X_list, y_list, winners, args.learning_rate)
-		# Save intermediate models
-		player_weights = "weights.%05d.hdf5" % i_iter
-		player.policy.model.save_weights(os.path.join(args.out_directory, player_weights))
-		# add player to batch of oppenents once in a while
-		if i_iter % args.save_every == 0:
-			metadata["oppenents"].append(player_weights)
-		save_metadata()
-
-if __name__ == '__main__':
-	run_training()
->>>>>>> latest

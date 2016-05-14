@@ -1,9 +1,17 @@
+<<<<<<< HEAD
+﻿import sgf
+import string
+import six.moves.cPickle as pickle
+from AlphaGo import go
+import datetime
+=======
 import sgf
 from AlphaGo import go
 
 # for board location indexing
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+>>>>>>> latest
 
 def flatten_idx(position, size):
 	(x, y) = position
@@ -73,6 +81,54 @@ def sgf_iter_states(sgf_string, include_end=True):
 	collection = sgf.parse(sgf_string)
 	game = collection[0]
 	gs = _sgf_init_gamestate(game.root)
+<<<<<<< HEAD
+	for node in game.rest:
+		props = node.properties
+		if 'W' in props:
+			move = _parse_sgf_move(props['W'][0])
+			player = go.WHITE
+		elif 'B' in props:
+			move = _parse_sgf_move(props['B'][0])
+			player = go.BLACK
+		yield (gs, move, player)
+		# update state to n+1
+		gs.do_move(move, player)
+		
+		
+def gamestate_dump(gamestate, path="d:\tmp\gamestate.gs"):
+	""" Dump game state to file
+	"""
+	output = open(path, 'wb')
+	pickle.dump(gamestate, output)
+
+def gamestate_to_sgf(gamestate,path="d:\\tmp\\gamestate.sgf"):
+    
+    alphabet=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    sgf_string = ""
+
+    sgf_string += ";FF[%d]GM[%d]SZ[%d]CA[UTF-8]SO[GeekGo.com]BC[ja]WC[ja]EV[%s]" % (4,1,19,'GeekGo')
+    sgf_string += "PB[%s]BR[%s]" % ('Computer1','9p')
+    sgf_string += "PW[%s]WR[%s]" % ('Computer2','9p')
+    sgf_string += "KM[%f]DT[%s]RE[%s]" % (6.5, datetime.datetime.now().strftime('%Y-%m-%d'),'Unknown')
+    count = 1
+    for (x,y) in gamestate.history:
+        if(count & 1):
+            sgf_string += ";B[%(x)s%(y)s]" % {'x':alphabet[x],'y':alphabet[y]}
+        else:
+            sgf_string += ";W[%(x)s%(y)s]" % {'x':alphabet[x],'y':alphabet[y]}
+        count += 1 
+
+    sgf_string = "(" + sgf_string + ")"
+
+    try:
+        f = open(path,'w')
+        f.write(sgf_string)
+    except:
+        print "Error\n"
+    else:
+        f.close()
+    return sgf_string
+=======
 	if game.rest is not None:
 		for node in game.rest:
 			props = node.properties
@@ -87,3 +143,4 @@ def sgf_iter_states(sgf_string, include_end=True):
 			gs.do_move(move, player)
 	if include_end:
 		yield (gs, None, None)
+>>>>>>> latest

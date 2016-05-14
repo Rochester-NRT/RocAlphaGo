@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import os
 import h5py as h5
 import json
@@ -11,7 +11,7 @@ def one_hot_action(action, size=19):
 	"""Convert an (x,y) action into a size x size array of zeros with a 1 at x,y
 	"""
 	categorical = np.zeros((size, size))
-	categorical[action] = 1
+	categorical[action[0], action[1]] = 1
 	return categorical
 
 
@@ -130,8 +130,13 @@ def run_training(cmd_line_args=None):
 	# TODO - (waiting on game_converter) verify that features of model match features of training data
 	dataset = h5.File(args.train_data)
 	n_total_data = len(dataset["states"])
+<<<<<<< HEAD
+	n_train_data = np.floor(args.train_val_test[0] * n_total_data) - 1
+	n_val_data = np.floor(args.train_val_test[1] * n_total_data) + 1
+=======
 	n_train_data = int(args.train_val_test[0] * n_total_data)
 	n_val_data = int(args.train_val_test[1] * n_total_data)
+>>>>>>> latest
 	# n_test_data = n_total_data - (n_train_data + n_val_data)
 
 	if args.verbose:

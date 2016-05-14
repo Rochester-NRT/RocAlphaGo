@@ -62,6 +62,7 @@ class CNNPolicy(object):
 
 		Analogous to [eval_state(s) for s in states]
 
+
 		Returns: a parallel list of move distributions as in eval_state
 		"""
 		n_states = len(states)

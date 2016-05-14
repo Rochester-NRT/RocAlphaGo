@@ -1,0 +1,21 @@
+{
+  "name": "wgo",
+  "description": "",
+  "main": "",
+  "authors": [
+    "Xiaomin Liu <xiaoml@microsoft.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/MicrosoftGeekHub/AlphaGo",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "www/lib",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^2.2.3"
+  }
+}

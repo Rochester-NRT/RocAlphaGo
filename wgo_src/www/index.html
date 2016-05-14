@@ -1,0 +1,41 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>WGO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link href="styles/main.css" rel="stylesheet">
+</head>
+
+<body>
+
+        <div id="board" style="text-align: center;margin-top: 100px;"></div>
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+        <script type="text/javascript" src="scripts/wgo.js"></script>
+        <script type="text/javascript" src="scripts/main.js"></script>
+        <script type="text/javascript">
+            var tryMore = function(){
+               location.reload();
+            }
+            var changeStyle = function(){
+                $(".wgo-board").css("display","inline-block").css("position","relative");
+                $('canvas').each(function(index,each){
+                    each.style.top = 0;
+                    each.style.left = 0;
+                });
+            };
+            changeStyle();
+        </script>
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="StartAgain" onclick="tryMore()">ReGo</button>
+        </div>
+
+</body>
+
+</html>
