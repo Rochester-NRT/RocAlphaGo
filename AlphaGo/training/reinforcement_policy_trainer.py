@@ -65,7 +65,12 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 		done = [st.is_end_of_game for st in states]
 		if all(done):
 			break
-	winners = [st.get_winner() for st in states]
+	winners = list()
+	for st in states:
+		if player_color == go.BLACK:
+			winner.append(st.get_winner())
+		else:
+			winner.append(-1 * st.get_winner())
 	# Concatenate tensors across turns within each game
 	for i in xrange(mini_batch_size):
 		X_list[i] = np.concatenate(X_list[i], axis=0)
