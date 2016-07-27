@@ -65,20 +65,15 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 		done = [st.is_end_of_game for st in states]
 		if all(done):
 			break
-	winners = list()
-	for st in states:
-		if player_color == go.BLACK:
-			winners.append(st.get_winner())
-		else:
-			winners.append(-1 * st.get_winner())
+	won_game_list = [st.get_winner() == player_color for st in states]
 	# Concatenate tensors across turns within each game
 	for i in xrange(mini_batch_size):
 		X_list[i] = np.concatenate(X_list[i], axis=0)
 		y_list[i] = np.vstack(y_list[i])
-	return X_list, y_list, winners
+	return X_list, y_list, won_game_list
 
 
-def train_batch(player, X_list, y_list, winners, lr):
+def train_batch(player, X_list, y_list, won_game_list, lr):
 	"""Given the outcomes of a mini-batch of play against a fixed opponent,
 		update the weights with reinforcement learning.
 
@@ -94,13 +89,13 @@ def train_batch(player, X_list, y_list, winners, lr):
 		player -- same player, with updated weights.
 	"""
 
-	for X, y, winner in zip(X_list, y_list, winners):
+	for X, y, won_game in zip(X_list, y_list, won_game_list):
 		# Update weights in + direction if player won, and - direction if player lost.
 		# Setting learning rate negative is hack for negative weights update.
-		if winner == -1:
-			player.policy.model.optimizer.lr.set_value(-lr)
-		else:
+		if won_game:
 			player.policy.model.optimizer.lr.set_value(lr)
+		else:
+			player.policy.model.optimizer.lr.set_value(-lr)
 		player.policy.model.fit(X, y, nb_epoch=1, batch_size=len(X))
 
 
@@ -195,10 +190,10 @@ def run_training(cmd_line_args=None):
 		if args.verbose:
 			print "Batch {}\tsampled opponent is {}".format(i_iter, opp_weights)
 		# Make training pairs and do RL
-		X_list, y_list, winners = make_training_pairs(player, opponent, features, args.game_batch, board_size)
-		win_ratio = np.sum(np.array(winners) == 1) / float(args.game_batch)
+		X_list, y_list, won_game_list = make_training_pairs(player, opponent, features, args.game_batch, board_size)
+		win_ratio = np.sum(np.array(won_game_list) == True) / float(args.game_batch)
 		metadata["win_ratio"][player_weights] = (opp_weights, win_ratio)
-		train_batch(player, X_list, y_list, winners, args.learning_rate)
+		train_batch(player, X_list, y_list, won_game_list, args.learning_rate)
 		# Save intermediate models
 		player_weights = "weights.%05d.hdf5" % i_iter
 		player.policy.model.save_weights(os.path.join(args.out_directory, player_weights))
