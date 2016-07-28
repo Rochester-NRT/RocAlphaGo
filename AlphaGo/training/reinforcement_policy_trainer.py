@@ -10,6 +10,7 @@ from AlphaGo.go import GameState
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
 from AlphaGo.util import flatten_idx
+import itertools
 
 
 def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
@@ -28,19 +29,31 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 	winners -- list of winners associated with each game in batch
 	"""
 
-	def do_move(states, moves, X_list, y_list, player_color):
+	def record_training_pair(st, mv, X, y):
+		# Convert move to one-hot
 		bsize_flat = bsize * bsize
+		state_1hot = preprocessor.state_to_tensor(st)
+		move_1hot = np.zeros(bsize_flat)
+		move_1hot[flatten_idx(mv, bsize)] = 1
+		X.append(state_1hot)
+		y.append(move_1hot)
+
+	# First we want to prep the states so that half of the boards get a move from the 'player'.
+	# The other half we want to leave alone so that the opponent makes the first move (being black).
+	# Decided to alternate every board because this is how humans would play a match.
+	def play_half_of_boards(states, moves, X_list, y_list):
+		for st, mv, X, y, should_move in zip(states, moves, X_list, y_list, itertools.cycle([True, False])):
+			if should_move:
+				record_training_pair(st, mv, X, y)
+				st.do_move(mv)
+
+	def do_move(states, moves, X_list, y_list, player_color):
 		for st, mv, X, y in zip(states, moves, X_list, y_list):
 			# Only do more moves if not end of game already
 			if not st.is_end_of_game:
-				print st.current_player == player_color
+				# Only want to record moves by the 'player', not the opponent
 				if st.current_player == player_color and mv is not go.PASS_MOVE:
-					# Convert move to one-hot
-					state_1hot = preprocessor.state_to_tensor(st)
-					move_1hot = np.zeros(bsize_flat)
-					move_1hot[flatten_idx(mv, bsize)] = 1
-					X.append(state_1hot)
-					y.append(move_1hot)
+					record_training_pair(st, mv, X, y)
 				st.do_move(mv)
 		return states, X_list, y_list
 
@@ -52,16 +65,22 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 	states = [GameState(size=board_size) for i in xrange(mini_batch_size)]
 	# Randomly choose who goes first (i.e. color of 'player')
 	player_color = np.random.choice([go.BLACK, go.WHITE])
-	player1, player2 = (player, opp) if player_color == go.BLACK else \
-		(opp, player)
+	player1, player2 = (player, opp) if player_color == go.BLACK else (opp, player)
+	# We let player1 move first for half of the boards in the minibatch
+	# The other half of the boards will be empty... waiting for a 'black' player
+	moves_player1 = player1.get_moves(states)
+	play_half_of_boards(states, moves_player1, X_list, y_list)
+	# Now player2 can move and will act as white for half and black for half
+	moves_player2 = player2.get_moves(states)
+	states, X_list, y_list = do_move(states, moves_player2, X_list, y_list, player_color)
+	# Now the game can continue.. each player acting as white and black split across the boards
 	while True:
-		# Get moves (batch)
-		moves_black = player1.get_moves(states)
-		# Do moves (black)
-		states, X_list, y_list = do_move(states, moves_black, X_list, y_list, player_color)
-		# Do moves (white)
-		moves_white = player2.get_moves(states)
-		states, X_list, y_list = do_move(states, moves_white, X_list, y_list, player_color)
+		# Get moves (batch) for player1
+		moves_player1 = player1.get_moves(states)
+		states, X_list, y_list = do_move(states, moves_player1, X_list, y_list, player_color)
+		# Get moves for player2
+		moves_player2 = player2.get_moves(states)
+		states, X_list, y_list = do_move(states, moves_player2, X_list, y_list, player_color)
 		# If all games have ended, we're done. Get winners.
 		done = [st.is_end_of_game for st in states]
 		if all(done):
