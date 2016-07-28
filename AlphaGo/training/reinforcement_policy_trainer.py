@@ -2,6 +2,7 @@ import os
 import argparse
 import json
 import numpy as np
+import itertools
 from shutil import copyfile
 from keras.optimizers import SGD
 from AlphaGo.ai import ProbabilisticPolicyPlayer
@@ -10,7 +11,6 @@ from AlphaGo.go import GameState
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
 from AlphaGo.util import flatten_idx
-import itertools
 
 
 def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
