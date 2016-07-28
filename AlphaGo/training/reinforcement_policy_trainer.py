@@ -2,6 +2,7 @@ import os
 import argparse
 import json
 import numpy as np
+import itertools
 from shutil import copyfile
 from keras.optimizers import SGD
 from AlphaGo.ai import ProbabilisticPolicyPlayer
@@ -28,18 +29,32 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 	winners -- list of winners associated with each game in batch
 	"""
 
-	def do_move(states, moves, X_list, y_list, player_color):
+	def record_training_pair(st, mv, X, y):
+		# Convert move to one-hot
 		bsize_flat = bsize * bsize
+		state_1hot = preprocessor.state_to_tensor(st)
+		move_1hot = np.zeros(bsize_flat)
+		move_1hot[flatten_idx(mv, bsize)] = 1
+		X.append(state_1hot)
+		y.append(move_1hot)
+
+	# First we want to prep the states so that half of the boards get a move from the 'player'.
+	# The other half we want to leave alone so that the opponent makes the first move (being black).
+	# Decided to alternate every board because this is how humans would play a match.
+	def play_half_of_boards(states, moves, X_list, y_list):
+		for st, mv, X, y, should_move in zip(states, moves, X_list, y_list, itertools.cycle([True, False])):
+			if should_move:
+				record_training_pair(st, mv, X, y)
+				st.do_move(mv)
+		return states, X_list, y_list
+
+	def do_move(states, moves, X_list, y_list, player_color):
 		for st, mv, X, y in zip(states, moves, X_list, y_list):
 			# Only do more moves if not end of game already
 			if not st.is_end_of_game:
+				# Only want to record moves by the 'player', not the opponent
 				if st.current_player == player_color and mv is not go.PASS_MOVE:
-					# Convert move to one-hot
-					state_1hot = preprocessor.state_to_tensor(st)
-					move_1hot = np.zeros(bsize_flat)
-					move_1hot[flatten_idx(mv, bsize)] = 1
-					X.append(state_1hot)
-					y.append(move_1hot)
+					record_training_pair(st, mv, X, y)
 				st.do_move(mv)
 		return states, X_list, y_list
 
@@ -51,29 +66,42 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 	states = [GameState(size=board_size) for i in xrange(mini_batch_size)]
 	# Randomly choose who goes first (i.e. color of 'player')
 	player_color = np.random.choice([go.BLACK, go.WHITE])
-	player1, player2 = (player, opp) if player_color == go.BLACK else \
-		(opp, player)
+	player1, player2 = (player, opp) if player_color == go.BLACK else (opp, player)
+	# We let player1 move first for half of the boards in the minibatch
+	# The other half of the boards will be empty... waiting for a 'black' player
+	moves_player1 = player1.get_moves(states)
+	states, X_list, y_list = play_half_of_boards(states, moves_player1, X_list, y_list)
+	# Now player2 can move and will act as white for half and black for half
+	moves_player2 = player2.get_moves(states)
+	states, X_list, y_list = do_move(states, moves_player2, X_list, y_list, player_color)
+	# Now the game can continue.. each player acting as white and black split across the boards
 	while True:
-		# Get moves (batch)
-		moves_black = player1.get_moves(states)
-		# Do moves (black)
-		states, X_list, y_list = do_move(states, moves_black, X_list, y_list, player_color)
-		# Do moves (white)
-		moves_white = player2.get_moves(states)
-		states, X_list, y_list = do_move(states, moves_white, X_list, y_list, player_color)
+		# Get moves (batch) for player1
+		moves_player1 = player1.get_moves(states)
+		states, X_list, y_list = do_move(states, moves_player1, X_list, y_list, player_color)
+		# Get moves for player2
+		moves_player2 = player2.get_moves(states)
+		states, X_list, y_list = do_move(states, moves_player2, X_list, y_list, player_color)
 		# If all games have ended, we're done. Get winners.
 		done = [st.is_end_of_game for st in states]
 		if all(done):
 			break
-	winners = [st.get_winner() for st in states]
+	won_game_list = []
+	# If player was black, every even board is black, odd board white
+	if player_color == go.BLACK:
+		for st, game_color in zip(states, itertools.cycle([go.BLACK, go.WHITE])):
+			won_game_list.append(st.get_winner() == game_color)
+	else:
+		for st, game_color in zip(states, itertools.cycle([go.WHITE, go.BLACK])):
+			won_game_list.append(st.get_winner() == game_color)
 	# Concatenate tensors across turns within each game
 	for i in xrange(mini_batch_size):
 		X_list[i] = np.concatenate(X_list[i], axis=0)
 		y_list[i] = np.vstack(y_list[i])
-	return X_list, y_list, winners
+	return X_list, y_list, won_game_list
 
 
-def train_batch(player, X_list, y_list, winners, lr):
+def train_batch(player, X_list, y_list, won_game_list, lr):
 	"""Given the outcomes of a mini-batch of play against a fixed opponent,
 		update the weights with reinforcement learning.
 
@@ -89,13 +117,13 @@ def train_batch(player, X_list, y_list, winners, lr):
 		player -- same player, with updated weights.
 	"""
 
-	for X, y, winner in zip(X_list, y_list, winners):
+	for X, y, won_game in zip(X_list, y_list, won_game_list):
 		# Update weights in + direction if player won, and - direction if player lost.
 		# Setting learning rate negative is hack for negative weights update.
-		if winner == -1:
-			player.policy.model.optimizer.lr.set_value(-lr)
-		else:
+		if won_game:
 			player.policy.model.optimizer.lr.set_value(lr)
+		else:
+			player.policy.model.optimizer.lr.set_value(-lr)
 		player.policy.model.fit(X, y, nb_epoch=1, batch_size=len(X))
 
 
@@ -190,10 +218,10 @@ def run_training(cmd_line_args=None):
 		if args.verbose:
 			print "Batch {}\tsampled opponent is {}".format(i_iter, opp_weights)
 		# Make training pairs and do RL
-		X_list, y_list, winners = make_training_pairs(player, opponent, features, args.game_batch, board_size)
-		win_ratio = np.sum(np.array(winners) == 1) / float(args.game_batch)
+		X_list, y_list, won_game_list = make_training_pairs(player, opponent, features, args.game_batch, board_size)
+		win_ratio = np.sum(np.array(won_game_list) == True) / float(args.game_batch)
 		metadata["win_ratio"][player_weights] = (opp_weights, win_ratio)
-		train_batch(player, X_list, y_list, winners, args.learning_rate)
+		train_batch(player, X_list, y_list, won_game_list, args.learning_rate)
 		# Save intermediate models
 		player_weights = "weights.%05d.hdf5" % i_iter
 		player.policy.model.save_weights(os.path.join(args.out_directory, player_weights))
