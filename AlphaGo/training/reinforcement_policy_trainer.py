@@ -46,6 +46,7 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 			if should_move:
 				record_training_pair(st, mv, X, y)
 				st.do_move(mv)
+		return states, X_list, y_list
 
 	def do_move(states, moves, X_list, y_list, player_color):
 		for st, mv, X, y in zip(states, moves, X_list, y_list):
@@ -69,7 +70,7 @@ def make_training_pairs(player, opp, features, mini_batch_size, board_size=19):
 	# We let player1 move first for half of the boards in the minibatch
 	# The other half of the boards will be empty... waiting for a 'black' player
 	moves_player1 = player1.get_moves(states)
-	play_half_of_boards(states, moves_player1, X_list, y_list)
+	states, X_list, y_list = play_half_of_boards(states, moves_player1, X_list, y_list)
 	# Now player2 can move and will act as white for half and black for half
 	moves_player2 = player2.get_moves(states)
 	states, X_list, y_list = do_move(states, moves_player2, X_list, y_list, player_color)
