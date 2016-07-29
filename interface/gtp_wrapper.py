@@ -39,7 +39,7 @@ class GTPGameConnector(object):
 		self._state.komi = k
 
 	def get_move(self, color):
-		if self.pass_on_first_offer and self.opponent_passed == True:
+		if self.pass_on_first_offer and self.opponent_passed:
 			return gtp.PASS
 		self._state.current_player = color
 		move = self._player.get_move(self._state)
