@@ -134,6 +134,9 @@ def run_training(cmd_line_args=None):
 	n_val_data = int(args.train_val_test[1] * n_total_data)
 	# n_test_data = n_total_data - (n_train_data + n_val_data)
 
+	# Need to make sure training data is divisible by minibatch size or get warning that mentioned accuracy from keras
+	# n_train_data = n_train_data - (n_train_data % 32)
+
 	if args.verbose:
 		print "datset loaded"
 		print "\t%d total samples" % n_total_data
