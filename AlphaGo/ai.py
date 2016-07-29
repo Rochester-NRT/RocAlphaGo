@@ -86,7 +86,7 @@ class MCTSPlayer(object):
 		# should call update_with_move so we can benefit from tree from earlier move, revisit because saw error
 		# For now will instantiate each call
 		self.mcts = mcts.MCTS(state, self.value_function, self.policy_function, self.rollout_function, self.lmbda, self.c_puct,
-						 self.rollout_limit, self.playout_depth, self.n_search)
+					self.rollout_limit, self.playout_depth, self.n_search)
 
 		sensible_moves = [move for move in state.get_legal_moves() if not state.is_eye(move, state.current_player)]
 		if len(sensible_moves) > 0:
