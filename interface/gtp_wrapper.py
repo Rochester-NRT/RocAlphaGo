@@ -8,20 +8,15 @@ class GTPGameConnector(object):
 	Engine by wrapping a GameState and Player instance
 	"""
 
-	def __init__(self, player, pass_on_first_offer=False):
+	def __init__(self, player):
 		self._state = go.GameState()
 		self._player = player
-		self.pass_on_first_offer = pass_on_first_offer
-		self.opponent_passed = False
 
 	def clear(self):
 		self._state = go.GameState(self._state.size)
-		self.opponent_passed = False
 
 	def make_move(self, color, vertex):
 		# vertex in GTP language is 1-indexed, whereas GameState's are zero-indexed
-		if vertex == gtp.PASS:
-			self.opponent_passed = True
 		try:
 			if vertex == gtp.PASS:
 				self._state.do_move(go.PASS_MOVE)
@@ -39,8 +34,6 @@ class GTPGameConnector(object):
 		self._state.komi = k
 
 	def get_move(self, color):
-		if self.pass_on_first_offer and self.opponent_passed:
-			return gtp.PASS
 		self._state.current_player = color
 		move = self._player.get_move(self._state)
 		if move == go.PASS_MOVE:
@@ -51,7 +44,7 @@ class GTPGameConnector(object):
 
 
 def run_gtp(player_obj, inpt_fn=None):
-	gtp_game = GTPGameConnector(player_obj, pass_on_first_offer=True)
+	gtp_game = GTPGameConnector(player_obj)
 	gtp_engine = gtp.Engine(gtp_game)
 	if inpt_fn is None:
 		inpt_fn = raw_input
