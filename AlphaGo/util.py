@@ -120,7 +120,7 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 	try:
 		import matplotlib
 		# This line is needed if you are running on headless machine
-		#matplotlib.use('Agg')
+		# matplotlib.use('Agg')
 		import matplotlib.pyplot as plt
 		import matplotlib.cm as cm
 	except:
