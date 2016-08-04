@@ -48,5 +48,5 @@ while counter < 10:
 	if gamestate.is_end_of_game:
 		break
 
-#save_gamestate_to_sgf(gamestate, "/alphago/heatmaps", "record.sgf", 'player', 'opponent')
+save_gamestate_to_sgf(gamestate, "", "record.sgf", 'player', 'opponent')
 
