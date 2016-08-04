@@ -2,6 +2,7 @@ from keras.models import Sequential, Model
 from keras.layers import convolutional, merge, Input, BatchNormalization
 from keras.layers.core import Activation, Flatten
 from AlphaGo.util import flatten_idx
+from AlphaGo.util import plot_network_output
 from AlphaGo.models.nn_util import Bias, NeuralNetBase, neuralnet
 import numpy as np
 
@@ -58,6 +59,7 @@ class CNNPolicy(NeuralNetBase):
 		tensor = self.preprocessor.state_to_tensor(state)
 		# run the tensor through the network
 		network_output = self.forward(tensor)
+		#plot_network_output(network_output, state.board, state.history, '/alphago/heatmaps')
 		moves = moves or state.get_legal_moves()
 		return self._select_moves_and_normalize(network_output[0], moves, state.size)
 

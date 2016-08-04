@@ -1,5 +1,6 @@
 import os
 import itertools
+import numpy as np
 import sgf
 from AlphaGo import go
 
@@ -113,3 +114,96 @@ def sgf_iter_states(sgf_string, include_end=True):
 			gs.do_move(move, player)
 	if include_end:
 		yield (gs, None, None)
+
+
+def plot_network_output(scores, board, history, out_directory, western_column_notation=True):
+	try:
+		import matplotlib
+		# This line is needed if you are running on headless machine
+		#matplotlib.use('Agg')
+		import matplotlib.pyplot as plt
+		import matplotlib.cm as cm
+	except:
+		print('Could not load matplotlib')
+		return
+
+	from distutils.version import StrictVersion
+	matplotlib_version = matplotlib.__version__
+	if StrictVersion(matplotlib_version) < StrictVersion('1.5.1'):
+		print('Your version of matplotlib might not support our use of it')
+
+	# Initial matplotlib setup
+	fig, ax = plt.subplots(figsize=(10, 10))
+	plt.xlim([0, 20])
+	plt.ylim([0, 20])
+
+	# Wooden background color
+	ax.set_axis_bgcolor('#fec97b')
+
+	# Board labels
+	ax.tick_params(axis='both', length=0, width=0)
+	plt.xticks(np.arange(1, 20, 1.0))
+	plt.yticks(np.arange(1, 20, 1.0))
+
+	# This block is used to flip the board vertically. This is because most western go software puts
+	# the origin at the bottom-left. SGF though is top-left which matches traditional notations.
+	if western_column_notation:
+		plt.gca().invert_yaxis()
+
+	# Draw grid
+	for i in xrange(19):
+		plt.plot([1, 19], [i + 1, i + 1], lw=1, color='k', zorder=0)
+	for i in xrange(19):
+		plt.plot([i + 1, i + 1], [1, 19], lw=1, color='k', zorder=0)
+
+	# Display network heat plots
+	reshaped = np.reshape(scores, (-1, 19))
+	score_x_coords = []
+	score_y_coords = []
+	score_values = []
+	for i in xrange(19):
+		for j in range(19):
+			if reshaped[i][j] * 100 >= 0.1:
+				score_x_coords.append(i + 1)
+				score_y_coords.append(j + 1)
+				score_values.append(reshaped[i][j])
+	min_seen = np.amin(scores)
+	max_seen = np.amax(scores)
+	norm = matplotlib.colors.Normalize(vmin=min_seen, vmax=max_seen)
+	coloring = cm.ScalarMappable(norm=norm, cmap=cm.cool).to_rgba(score_values)
+	plt.scatter(score_x_coords, score_y_coords, marker='o', s=700, c=coloring, edgecolor='k', zorder=1)
+
+	# Display network scores on heat plots
+	for i, txt in enumerate(score_values):
+		ax.annotate('{0:.1f}'.format(txt * 100), (score_x_coords[i], score_y_coords[i]), color='k', ha='center',
+					va='center', size=10, zorder=3)
+
+	# Display stones already played
+	stone_x_coords = []
+	stone_y_coords = []
+	stone_colors = []
+	for i in xrange(19):
+		for j in range(19):
+			if board[i][j] != 0.0:
+				stone_x_coords.append(i + 1)
+				stone_y_coords.append(j + 1)
+				if board[i][j] == 1.0:
+					stone_colors.append([0, 0, 0, 1])
+				else:
+					stone_colors.append([1, 1, 1, 1])
+	plt.scatter(stone_x_coords, stone_y_coords, marker='o', edgecolors='k', s=700, c=stone_colors, zorder=4)
+
+	# Place red marker on last move if it exists
+	if len(history) != 0:
+		# If last move was not pass
+		if history[-1] != go.PASS_MOVE:
+			last_move = history[-1]
+			x_coord = last_move[0] + 1
+			y_coord = last_move[1] + 1
+			last_move = (x_coord, y_coord)
+			plt.scatter(last_move[0], last_move[1], marker='s', color='r', edgecolors='k', s=100, zorder=4)
+
+	move_number = len(history)
+	plt.savefig(os.path.join(out_directory, 'move-{}.png'.format(move_number)), bbox_inches='tight')
+	plt.show()
+	plt.close()
