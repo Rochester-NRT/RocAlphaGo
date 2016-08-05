@@ -139,16 +139,19 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 
 	# Wooden background color
 	ax.set_axis_bgcolor('#fec97b')
+	plt.gca().invert_yaxis()
 
-	# Board labels
+	# Setup ticks
 	ax.tick_params(axis='both', length=0, width=0)
-	plt.xticks(np.arange(1, 20, 1.0))
-	plt.yticks(np.arange(1, 20, 1.0))
-
-	# This block is used to flip the board vertically. This is because most western go software puts
-	# the origin at the bottom-left. SGF though is top-left which matches traditional notations.
+	# Western notation has the origin at the lower-left
 	if western_column_notation:
-		plt.gca().invert_yaxis()
+		plt.xticks(range(1, 20), range(1, 20))
+		plt.yticks(range(1, 20), reversed(range(1, 20)))
+	# Tranditional notation has the origin at the upper-left and uses leters minus 'I' along the top
+	else:
+		ax.xaxis.tick_top()
+		plt.xticks(range(1, 20), [x for x in LETTERS[:20] if x != 'I'])
+		plt.yticks(range(1, 20), range(1, 20))
 
 	# Draw grid
 	for i in xrange(19):
