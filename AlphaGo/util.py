@@ -124,16 +124,17 @@ def sgf_iter_states(sgf_string, include_end=True):
 		yield (gs, None, None)
 
 
-def plot_network_output(scores, board, history, out_directory, western_column_notation=True):
+def plot_network_output(scores, board, history, out_directory, output_file, should_plot=False, western_column_notation=True):
 	try:
 		import matplotlib
-		# This line is needed if you are running on headless machine
-		# matplotlib.use('Agg')
 		import matplotlib.pyplot as plt
 		import matplotlib.cm as cm
-	except:
-		print('Could not load matplotlib')
-		return
+	except ImportError as e:
+		print(
+			'Failed to import matplotlib. This is an optional dependency of the RocAlphaGo project, ' +
+			'so it is not included in the requirements file. ' +
+			'You must install matplotlib yourself to use the plotting functions.')
+		raise e
 
 	from distutils.version import StrictVersion
 	matplotlib_version = matplotlib.__version__
@@ -142,8 +143,8 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 
 	# Initial matplotlib setup
 	fig, ax = plt.subplots(figsize=(10, 10))
-	plt.xlim([0, 20])
-	plt.ylim([0, 20])
+	plt.xlim([0, board.size + 1])
+	plt.ylim([0, board.size + 1])
 
 	# Wooden background color
 	ax.set_axis_bgcolor('#fec97b')
@@ -153,27 +154,27 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 	ax.tick_params(axis='both', length=0, width=0)
 	# Western notation has the origin at the lower-left
 	if western_column_notation:
-		plt.xticks(range(1, 20), range(1, 20))
-		plt.yticks(range(1, 20), reversed(range(1, 20)))
-	# Tranditional notation has the origin at the upper-left and uses leters minus 'I' along the top
+		plt.xticks(range(1, board.size + 1), range(1, board.size + 1))
+		plt.yticks(range(1, board.size + 1), reversed(range(1, board.size + 1)))
+	# Traditional notation has the origin at the upper-left and uses letters minus 'I' along the top
 	else:
 		ax.xaxis.tick_top()
-		plt.xticks(range(1, 20), [x for x in LETTERS[:20] if x != 'I'])
-		plt.yticks(range(1, 20), range(1, 20))
+		plt.xticks(range(1, board.size+1), [x for x in LETTERS[:board.size+1] if x != 'I'])
+		plt.yticks(range(1, board.size+1), range(1, board.size+1))
 
 	# Draw grid
-	for i in xrange(19):
-		plt.plot([1, 19], [i + 1, i + 1], lw=1, color='k', zorder=0)
-	for i in xrange(19):
-		plt.plot([i + 1, i + 1], [1, 19], lw=1, color='k', zorder=0)
+	for i in range(board.size):
+		plt.plot([1, board.size], [i + 1, i + 1], lw=1, color='k', zorder=0)
+	for i in range(board.size):
+		plt.plot([i + 1, i + 1], [1, board.size], lw=1, color='k', zorder=0)
 
 	# Display network heat plots
-	reshaped = np.reshape(scores, (-1, 19))
+	reshaped = np.reshape(scores, (board.size, board.size))
 	score_x_coords = []
 	score_y_coords = []
 	score_values = []
-	for i in xrange(19):
-		for j in range(19):
+	for i in range(board.size):
+		for j in range(board.size):
 			if reshaped[i][j] * 100 >= 0.1:
 				score_x_coords.append(i + 1)
 				score_y_coords.append(j + 1)
@@ -193,15 +194,15 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 	stone_x_coords = []
 	stone_y_coords = []
 	stone_colors = []
-	for i in xrange(19):
-		for j in range(19):
-			if board[i][j] != 0.0:
+	for i in range(board.size):
+		for j in range(board.size):
+			if board[i][j] != go.EMPTY:
 				stone_x_coords.append(i + 1)
 				stone_y_coords.append(j + 1)
-				if board[i][j] == 1.0:
-					stone_colors.append([0, 0, 0, 1])
+				if board[i][j] == go.BLACK:
+					stone_colors.append(plt.to_rgb('black'))
 				else:
-					stone_colors.append([1, 1, 1, 1])
+					stone_colors.append(plt.to_rgb('white'))
 	plt.scatter(stone_x_coords, stone_y_coords, marker='o', edgecolors='k', s=700, c=stone_colors, zorder=4)
 
 	# Place red marker on last move if it exists
@@ -212,9 +213,10 @@ def plot_network_output(scores, board, history, out_directory, western_column_no
 			x_coord = last_move[0] + 1
 			y_coord = last_move[1] + 1
 			last_move = (x_coord, y_coord)
-			plt.scatter(last_move[0], last_move[1], marker='s', color='r', edgecolors='k', s=100, zorder=4)
+			plt.scatter(last_move[0], last_move[1], marker='s', color='r', edgecolors='k', s=100, zorder=5)
 
-	move_number = len(history)
-	plt.savefig(os.path.join(out_directory, 'move-{}.png'.format(move_number)), bbox_inches='tight')
-	plt.show()
+	if output_file is not None:
+		plt.savefig(os.path.join(out_directory, output_file), bbox_inches='tight')
+	if should_plot:
+		plt.show()
 	plt.close()
