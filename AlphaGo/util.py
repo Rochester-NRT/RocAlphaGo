@@ -159,8 +159,8 @@ def plot_network_output(scores, board, history, out_directory, output_file, shou
 	# Traditional notation has the origin at the upper-left and uses letters minus 'I' along the top
 	else:
 		ax.xaxis.tick_top()
-		plt.xticks(range(1, board.size+1), [x for x in LETTERS[:board.size+1] if x != 'I'])
-		plt.yticks(range(1, board.size+1), range(1, board.size+1))
+		plt.xticks(range(1, board.size + 1), [x for x in LETTERS[:board.size + 1] if x != 'I'])
+		plt.yticks(range(1, board.size + 1), range(1, board.size + 1))
 
 	# Draw grid
 	for i in range(board.size):
