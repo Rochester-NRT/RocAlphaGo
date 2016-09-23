@@ -326,6 +326,124 @@ class GameState(object):
                 return False
         return True
 
+    def is_ladder_capture(self, action, prey=None):
+        """Check if moving at action results in a ladder capture, defined as being next
+        to an enemy group with two liberties, and with no ladder_escape move afterward
+        for the other player.
+
+        If prey is None, check all adjacent groups, otherwise only the prey
+        group is checked.  In the (prey is None) case, if this move is a ladder
+        capture for any adjance group, it's considered a ladder capture.
+
+        """
+
+        # ignore illegal moves
+        if not self.is_legal(action):
+            return False
+
+        hunter_player = self.current_player
+        prey_player = - self.current_player
+
+        if prey is None:
+            # default case is to check all adjacent prey_player groups that
+            # have 2 liberties
+            neighbor_groups_stones = [next(iter(group)) for group in self.get_groups_around(action)]
+            potential_prey = [(nx, ny) for (nx, ny) in neighbor_groups_stones
+                              if (self.board[nx][ny] == prey_player and
+                                  self.liberty_counts[nx][ny] == 2)]
+        else:
+            # we are checking a specific group (called from is_ladder_escape)
+            potential_prey = [prey]
+
+        for (prey_x, prey_y) in potential_prey:
+            # attempt to capture the group at prey_x, prey_y in a ladder
+            tmp = self.copy()
+            tmp.do_move(action)
+
+            # we only want to check a limited set of possible escape moves:
+            # - extensions from the remaining liberty of the prey group.
+            # - captures of enemy groups adjacent to the prey group.
+            possible_escapes = tmp.liberty_sets[prey_x][prey_y].copy()
+
+            # Check if any hunter groups adjacent to the prey groups
+            # are in atari.  Capturing these groups are potential escapes.
+            #
+            # TODO: make this more efficient, possibly by adding an
+            # "adjacent_groups" cache
+            for prey_stone in tmp.group_sets[prey_x][prey_y]:
+                for (nx, ny) in tmp._neighbors(prey_stone):
+                    if (tmp.board[nx][ny] == hunter_player) and (tmp.liberty_counts[nx][ny] == 1):
+                        possible_escapes |= tmp.liberty_sets[nx][ny]
+
+            if not any(tmp.is_ladder_escape((escape_x, escape_y), prey=(prey_x, prey_y))
+                       for (escape_x, escape_y) in possible_escapes):
+                # we found at least one group that could be captured in a
+                # ladder, so this move is a ladder capture.
+                return True
+
+        # no ladder captures were found
+        return False
+
+    def is_ladder_escape(self, action, prey=None):
+        """Check if moving at action results in a ladder escape, defined as being next
+        to a current player's group with one liberty, with no ladder captures
+        afterward.  Going from 1 to >= 3 liberties is counted as escape, or a
+        move giving two liberties without a subsequent ladder capture.
+
+        If prey is None, check all adjacent groups, otherwise only the prey
+        group is checked.  In the (prey is None) case, if this move is a ladder
+        escape for any adjacent group, this move is a ladder escape.
+
+        """
+
+        # ignore illegal moves
+        if not self.is_legal(action):
+            return False
+
+        prey_player = self.current_player
+
+        if prey is None:
+            # default case is to check all adjacent groups that might be in a
+            # ladder (i.e., with one liberty)
+            neighbor_groups_stones = [next(iter(group)) for group in self.get_groups_around(action)]
+            potential_prey = [(nx, ny) for (nx, ny) in neighbor_groups_stones
+                              if (self.board[nx][ny] == prey_player and
+                                  self.liberty_counts[nx][ny] == 1)]
+        else:
+            # we are checking a specific group (called from is_ladder_capture)
+            potential_prey = [prey]
+
+        # This move is an escape if it's an escape for any of the potential_prey
+        for (prey_x, prey_y) in potential_prey:
+            # make the move, see if the group at (prey_x, prey_y) has escaped,
+            # defined as having >= 3 liberties, or 2 liberties and not
+            # ladder_capture() being true when played on either of those
+            # liberties.
+            tmp = self.copy()
+            tmp.do_move(action)
+
+            # if we have >= 3 liberties, we've escaped
+            if tmp.liberty_counts[prey_x][prey_y] >= 3:
+                return True
+
+            # if we only have 1 liberty, we've failed
+            if tmp.liberty_counts[prey_x][prey_y] == 1:
+                # not an escape - check next group
+                continue
+
+            # The current group has two liberties.  It may still be in a ladder.
+            # Check both liberties to see if they are ladder captures
+            if any(tmp.is_ladder_capture(possible_capture, prey=(prey_x, prey_y))
+                   for possible_capture in tmp.liberty_sets[prey_x][prey_y]):
+                # not an escape - check next group
+                continue
+
+            # reached two liberties that were no longer ladder-capturable
+            return True
+
+        # no ladder escape found
+        return False
+
     def get_legal_moves(self, include_eyes=True):
         if self.__legal_move_cache is not None:
             if include_eyes:
