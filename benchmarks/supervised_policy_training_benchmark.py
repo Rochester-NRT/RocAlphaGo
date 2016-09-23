@@ -14,7 +14,7 @@ arguments = ('model.json', 'debug_feature_planes.hdf5', 'training_results/', 5, 
 
 
 def run_supervised_policy_training():
-	run_training(*arguments)
+    run_training(*arguments)
 
 profile.runcall(run_supervised_policy_training)
 profile.dump_stats('supervised_policy_training_bench_results.prof')

@@ -3,7 +3,7 @@ from keras.layers import convolutional
 from keras.layers.core import Dense, Flatten
 # from SGD_exponential_decay import SGD_exponential_decay as SGD
 
-### Parameters obtained from paper ###
+# Parameters obtained from paper
 K = 152                        # depth of convolutional layers
 LEARNING_RATE = .003           # initial learning rate
 DECAY = 8.664339379294006e-08  # rate of exponential learning_rate decay
