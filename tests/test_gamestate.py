@@ -71,3 +71,28 @@ class TestSymmetries(unittest.TestCase):
 
 		for i in range(8):
 			self.assertTrue(np.array_equal(expectations[i].board, self.syms[i].board), descriptions[i])
+
+class TestKo(unittest.TestCase):
+
+	def test_standard_ko(self):
+		gs = GameState(size=9)
+		gs.do_move((1,0)) # B
+		gs.do_move((2,0)) # W
+		gs.do_move((0,1)) # B
+		gs.do_move((3,1)) # W
+		gs.do_move((1,2)) # B
+		gs.do_move((2,2)) # W
+		gs.do_move((2,1)) # B
+		
+		gs.do_move((1,1)) # W trigger capture and ko
+
+		self.assertEqual(gs.num_black_prisoners, 1)
+		self.assertEqual(gs.num_white_prisoners, 0)
+
+		self.assertFalse(gs.is_legal((2,1)))
+
+		gs.do_move((5,5))
+		gs.do_move((5,6))
+
+		self.assertTrue(gs.is_legal((2,1)))
+
