@@ -2,3 +2,6 @@
 *.npy
 *.h5
 *.sgf
+!tests/test_data/*.sgf
+!tests/test_data/*.h5
+!tests/test_data/*.npy

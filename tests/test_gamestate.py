@@ -71,3 +71,18 @@ class TestSymmetries(unittest.TestCase):
 
 		for i in range(8):
 			self.assertTrue(np.array_equal(expectations[i].board, self.syms[i].board), descriptions[i])
+
+class TestSGFInterface(unittest.TestCase):
+
+	def test_load_sgf(self):
+
+		sgf_file = "tests/test_data/friday_tournament.sgf"
+		with open(sgf_file, "r") as f:
+			states = GameState.from_sgf(f.read())
+
+		# from_sgf() returns an interator over states. first assert that we got one.
+		state = next(states,None)
+		self.assertIsNotNone(state)
+
+		# check to see if it is sensible
+		# TODO: hand-code expected result by inspection of the SGF file and verify that the resulting GameState matches
