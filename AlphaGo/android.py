@@ -61,16 +61,20 @@ def run_android( cmd_line_args = None ):
         from tensorflow.python.framework.graph_util import convert_variables_to_constants
 
         # show names of all layers
-        print[n.name for n in tf.get_default_graph().as_graph_def().node]
-            
-        # extra whiteline
-        print " \n"
+        if args.verbose:
+            print( "All tensors/variables" )
+            print[n.name for n in tf.get_default_graph().as_graph_def().node]
+            # extra whiteline
+            print " \n"
 
         # get all layes necessary to compute output layer 'Softmax'
         minimal_graph = convert_variables_to_constants( sess, sess.graph_def, ["Softmax"] )
         
         # show names in minimal_graph
-        print[n.name for n in minimal_graph.node ]
+
+        if args.verbose:
+            print( "All tensors/variables in minimal_graph" )
+            print[n.name for n in minimal_graph.node ]
         
         # create .pb file
         tf.train.write_graph( minimal_graph, '.', 'minimal_graph.pb', as_text = False )
