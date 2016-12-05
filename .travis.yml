@@ -1,25 +1,25 @@
 language: python
 matrix:
     include:
-        - python: 3.5
-          env: KERAS_BACKEND=theano
-        - python: 3.5
-          env: KERAS_BACKEND=tensorflow
+#        - python: 3.5
+#          env: KERAS_BACKEND=theano
+#        - python: 3.5
+#          env: KERAS_BACKEND=tensorflow
         - python: 3.4
           env: KERAS_BACKEND=theano
         - python: 3.4
           env: KERAS_BACKEND=tensorflow
-        - python: 3.3
-          env: KERAS_BACKEND=theano
-        - python: 3.3
-          env: KERAS_BACKEND=tensorflow
+#        - python: 3.3
+#          env: KERAS_BACKEND=theano
+#        - python: 3.3
+#          env: KERAS_BACKEND=tensorflow
         - python: 2.7
           env: KERAS_BACKEND=theano
         - python: 2.7
           env: KERAS_BACKEND=tensorflow
 
 # Setup anaconda
-before_install:
+install:
   # code below is taken from http://conda.pydata.org/docs/travis.html
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
@@ -44,7 +44,7 @@ before_install:
   - sudo ln -s /run/shm /dev/shm
 
 # Install packages
-install:
+# install:
   - conda install --yes python=2.7 Cython=0.24 h5py=2.6.0 numpy=1.11.2 scipy=0.18.1 PyYAML=3.12 matplotlib pandas pytest
   - pip install --user --no-deps Theano==0.8.2 sgf==0.5 keras==1.1.2 pygtp==0.3
   - pip install --user flake8
@@ -53,12 +53,12 @@ install:
   # install TensorFlow
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp27-none-linux_x86_64.whl;
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
-      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
+#    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
+#      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
     elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
       pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
-      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl;
+#    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+#      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl;
     fi
 
 # run flake8 and unit tests
