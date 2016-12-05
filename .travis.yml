@@ -19,7 +19,7 @@ matrix:
           env: KERAS_BACKEND=tensorflow
 
 # Setup anaconda
-install:
+before_install:
   # code below is taken from http://conda.pydata.org/docs/travis.html
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
@@ -44,7 +44,7 @@ install:
   - sudo ln -s /run/shm /dev/shm
 
 # Install packages
-# install:
+install:
   - conda install --yes python=2.7 Cython=0.24 h5py=2.6.0 numpy=1.11.2 scipy=0.18.1 PyYAML=3.12 matplotlib pandas pytest
   - pip install --user --no-deps Theano==0.8.2 sgf==0.5 keras==1.1.2 pygtp==0.3
   - pip install --user flake8
