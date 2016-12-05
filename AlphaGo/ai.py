@@ -1,5 +1,6 @@
 """Policy players"""
 import numpy as np
+from operator import itemgetter
 from AlphaGo import go
 from AlphaGo import mcts
 
@@ -23,7 +24,7 @@ class GreedyPolicyPlayer(object):
         sensible_moves = [move for move in state.get_legal_moves(include_eyes=False)]
         if len(sensible_moves) > 0:
             move_probs = self.policy.eval_state(state, sensible_moves)
-            max_prob = max(move_probs, key=lambda (a, p): p)
+            max_prob = max(move_probs, key=itemgetter(1))
             return max_prob[0]
         # No 'sensible' moves available, so do pass move
         return go.PASS_MOVE

@@ -39,5 +39,6 @@ class TestLiberties(unittest.TestCase):
         # get_group of a single piece
         self.assertEqual(len(st.get_group((5, 5))), 1, "group size of single piece")
 
+
 if __name__ == '__main__':
     unittest.main()

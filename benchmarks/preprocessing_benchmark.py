@@ -13,5 +13,6 @@ def run_convert_game():
     for traindata in gc.convert_game(*args):
         pass
 
+
 prof.runcall(run_convert_game)
 prof.dump_stats('bench_results.prof')

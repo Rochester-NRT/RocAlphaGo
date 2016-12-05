@@ -33,5 +33,6 @@ class TestProbabilisticPolicyPlayer(unittest.TestCase):
         self.assertFalse(any(np.isnan(player_low.apply_temperature(distribution))))
         self.assertFalse(any(np.isnan(player_high.apply_temperature(distribution))))
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -38,6 +38,7 @@ class value_trainer:
         # TODO use self.model.fit_generator to train from data source
         pass
 
+
 if __name__ == '__main__':
     trainer = value_trainer()
     # TODO command line instantiation

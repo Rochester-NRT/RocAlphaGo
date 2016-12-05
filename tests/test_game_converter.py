@@ -26,5 +26,6 @@ class TestCmdlineConverter(unittest.TestCase):
         run_game_converter(args)
         os.remove('.tmp.testing.h5')
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -359,5 +359,6 @@ class TestPreprocessingFeatures(unittest.TestCase):
 
         self.assertTrue(np.all(expectation == feature))
 
+
 if __name__ == '__main__':
     unittest.main()

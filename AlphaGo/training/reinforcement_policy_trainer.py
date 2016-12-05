@@ -218,15 +218,15 @@ def run_training(cmd_line_args=None):
 
     if not os.path.exists(args.out_directory):
         if args.verbose:
-            print "creating output directory {}".format(args.out_directory)
+            print("creating output directory {}".format(args.out_directory))
         os.makedirs(args.out_directory)
 
     if not args.resume:
         # make a copy of weights file, "weights.00000.hdf5" in the output directory
         copyfile(args.initial_weights, os.path.join(args.out_directory, ZEROTH_FILE))
         if args.verbose:
-            print "copied {} to {}".format(args.initial_weights,
-                                           os.path.join(args.out_directory, ZEROTH_FILE))
+            print("copied {} to {}".format(args.initial_weights,
+                                           os.path.join(args.out_directory, ZEROTH_FILE)))
         player_weights = ZEROTH_FILE
     else:
         # if resuming, we expect initial_weights to be just a
@@ -236,7 +236,7 @@ def run_training(cmd_line_args=None):
         if not os.path.exists(args.initial_weights):
             raise ValueError("Cannot resume; weights {} do not exist".format(args.initial_weights))
         elif args.verbose:
-            print "Resuming with weights {}".format(args.initial_weights)
+            print("Resuming with weights {}".format(args.initial_weights))
         player_weights = os.path.basename(args.initial_weights)
 
     # Set initial conditions
@@ -252,7 +252,7 @@ def run_training(cmd_line_args=None):
                                          move_limit=args.move_limit)
 
     if args.verbose:
-        print "created player and opponent with temperature {}".format(args.policy_temp)
+        print("created player and opponent with temperature {}".format(args.policy_temp))
 
     if not args.resume:
         metadata = {
@@ -278,7 +278,7 @@ def run_training(cmd_line_args=None):
 
     optimizer = BatchedReinforcementLearningSGD(lr=args.learning_rate, ng=args.game_batch)
     player.policy.model.compile(loss=log_loss, optimizer=optimizer)
-    for i_iter in xrange(1, args.iterations + 1):
+    for i_iter in range(1, args.iterations + 1):
         # Randomly choose opponent from pool (possibly self), and playing
         # game_batch games against them.
         opp_weights = np.random.choice(metadata["opponents"])
@@ -287,7 +287,7 @@ def run_training(cmd_line_args=None):
         # Load new weights into opponent's network, but keep the same opponent object.
         opponent.policy.model.load_weights(opp_path)
         if args.verbose:
-            print "Batch {}\tsampled opponent is {}".format(i_iter, opp_weights)
+            print("Batch {}\tsampled opponent is {}".format(i_iter, opp_weights))
 
         # Run games (and learn from results). Keep track of the win ratio vs
         # each opponent over time.
@@ -302,6 +302,7 @@ def run_training(cmd_line_args=None):
         if i_iter % args.save_every == 0:
             metadata["opponents"].append(player_weights)
         save_metadata()
+
 
 if __name__ == '__main__':
     run_training()

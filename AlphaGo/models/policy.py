@@ -241,8 +241,8 @@ class ResnetPolicy(CNNPolicy):
         while layer < params['layers']:
             convolution_path, layer = add_resnet_unit(convolution_path, layer, **params)
         if layer > params['layers']:
-            print ("Due to skipping, ended with {} layers instead of {}"
-                   .format(layer, params['layers']))
+            print("Due to skipping, ended with {} layers instead of {}"
+                  .format(layer, params['layers']))
 
         # since each layer's activation was linear, need one more ReLu
         convolution_path = Activation('relu')(convolution_path)

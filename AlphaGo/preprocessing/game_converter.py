@@ -13,7 +13,7 @@ class SizeMismatchError(Exception):
     pass
 
 
-class game_converter:
+class GameConverter:
 
     def __init__(self, features):
         self.feature_processor = Preprocess(features)
@@ -63,7 +63,6 @@ class game_converter:
             test_actions = actions[index:index+length]
 
         """
-        # TODO - also save feature list
 
         # make a hidden temporary file in case of a crash.
         # on success, this is renamed to hdf5_file
@@ -88,8 +87,13 @@ class game_converter:
                 exact=False,
                 chunks=(1024, 2),
                 compression="lzf")
+
             # 'file_offsets' is an HDF5 group so that 'file_name in file_offsets' is fast
             file_offsets = h5f.require_group('file_offsets')
+
+            # Store comma-separated list of feature planes in the scalar field 'features'. The
+            # string can be retrieved using h5py's scalar indexing: h5f['features'][()]
+            h5f['features'] = np.string_(','.join(self.feature_processor.feature_list))
 
             if verbose:
                 print("created HDF5 dataset in {}".format(tmp_file))
@@ -179,8 +183,8 @@ def run_game_converter(cmd_line_args=None):
             "capture_size",
             "self_atari_size",
             "liberties_after",
-            # "ladder_capture",
-            # "ladder_escape",
+            "ladder_capture",
+            "ladder_escape",
             "sensibleness",
             "zeros"]
     else:
@@ -189,7 +193,7 @@ def run_game_converter(cmd_line_args=None):
     if args.verbose:
         print("using features", feature_list)
 
-    converter = game_converter(feature_list)
+    converter = GameConverter(feature_list)
 
     def _is_sgf(fname):
         return fname.strip()[-4:] == ".sgf"

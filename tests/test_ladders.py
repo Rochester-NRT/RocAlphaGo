@@ -141,5 +141,6 @@ class TestLadder(unittest.TestCase):
         self.assertTrue(st.is_ladder_escape(moves['a']))
         self.assertTrue(st.is_ladder_escape(moves['b'], prey=moves['c']))
 
+
 if __name__ == '__main__':
     unittest.main()

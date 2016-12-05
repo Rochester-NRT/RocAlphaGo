@@ -16,5 +16,6 @@ class TestSupervisedPolicyTrainer(unittest.TestCase):
         os.remove(os.path.join(output, 'weights.00000.hdf5'))
         os.rmdir(output)
 
+
 if __name__ == '__main__':
     unittest.main()

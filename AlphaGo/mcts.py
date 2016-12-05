@@ -5,6 +5,7 @@ game of Go; everything in this file is implemented generically with respect to s
 policy function, and value function.
 """
 import numpy as np
+from operator import itemgetter
 
 
 class TreeNode(object):
@@ -42,7 +43,7 @@ class TreeNode(object):
         Returns:
         A tuple of (action, next_node)
         """
-        return max(self._children.iteritems(), key=lambda (action, node): node.get_value())
+        return max(self._children.iteritems(), key=lambda act_node: act_node[1].get_value())
 
     def update(self, leaf_value, c_puct):
         """Update node values from leaf evaluation.
@@ -176,11 +177,11 @@ class MCTS(object):
             action_probs = self._rollout(state)
             if len(action_probs) == 0:
                 break
-            max_action = max(action_probs, key=lambda (a, p): p)[0]
+            max_action = max(action_probs, key=itemgetter(1))[0]
             state.do_move(max_action)
         else:
             # If no break from the loop, issue a warning.
-            print "WARNING: rollout reached move limit"
+            print("WARNING: rollout reached move limit")
         winner = state.get_winner()
         if winner == 0:
             return 0
@@ -202,7 +203,7 @@ class MCTS(object):
 
         # chosen action is the *most visited child*, not the highest-value one
         # (they are the same as self._n_playout gets large).
-        return max(self._root._children.iteritems(), key=lambda (a, n): n._n_visits)[0]
+        return max(self._root._children.iteritems(), key=lambda act_node: act_node[1]._n_visits)[0]
 
     def update_with_move(self, last_move):
         """Step forward in the tree, keeping everything we already know about the subtree, assuming

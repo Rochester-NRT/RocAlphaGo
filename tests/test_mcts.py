@@ -1,5 +1,6 @@
 from AlphaGo.go import GameState
 from AlphaGo.mcts import MCTS, TreeNode
+from operator import itemgetter
 import numpy as np
 import unittest
 
@@ -63,7 +64,7 @@ class TestMCTS(unittest.TestCase):
         node = self.mcts._root
         expansions = 0
         # Loop over actions in decreasing probability.
-        for action, _ in sorted(dummy_policy(self.gs), key=lambda (a, p): p, reverse=True):
+        for action, _ in sorted(dummy_policy(self.gs), key=itemgetter(1), reverse=True):
             if action in node._children:
                 expansions += 1
                 node = node._children[action]
@@ -119,6 +120,7 @@ dummy_distribution = dummy_distribution / dummy_distribution.sum()
 def dummy_policy(state):
     moves = state.get_legal_moves(include_eyes=False)
     return zip(moves, dummy_distribution)
+
 
 # Rollout is a clone of the policy function.
 dummy_rollout = dummy_policy
