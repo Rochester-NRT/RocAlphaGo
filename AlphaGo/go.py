@@ -326,7 +326,7 @@ class GameState(object):
                 return False
         return True
 
-    def is_ladder_capture(self, action, prey=None, remaining_attempts=40):
+    def is_ladder_capture(self, action, prey=None, remaining_attempts=80):
         """Check if moving at action results in a ladder capture, defined as being next
         to an enemy group with two liberties, and with no ladder_escape move afterward
         for the other player.
@@ -393,7 +393,7 @@ class GameState(object):
         # no ladder captures were found
         return False
 
-    def is_ladder_escape(self, action, prey=None, remaining_attempts=40):
+    def is_ladder_escape(self, action, prey=None, remaining_attempts=80):
         """Check if moving at action results in a ladder escape, defined as being next
         to a current player's group with one liberty, with no ladder captures
         afterward.  Going from 1 to >= 3 liberties is counted as escape, or a
