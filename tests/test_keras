@@ -1,0 +1,16 @@
+from keras import backend as K
+import unittest
+
+class TestKeras( unittest.TestCase ):
+    ''' Verify keras image_dim_ordering is set to 'th'.
+        This ensures correct tensor shapes even when Tensorflow 
+        is used as backend.
+    '''
+
+    def test_keras_image_dim_ordering( self ):
+
+       # verify image_dim_ordering is set to 'th'
+       self.assertTrue( K.image_dim_ordering() == 'th' )
+
+if __name__ == '__main__':
+    unittest.main()
