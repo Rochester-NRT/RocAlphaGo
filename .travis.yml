@@ -1,6 +1,7 @@
 sudo: required
 dist: trusty
 language: python
+# tested language / keras backends
 matrix:
     include:
         - python: 3.5
@@ -32,14 +33,14 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-# The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
+  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
   - sudo rm -rf /dev/shm
   - sudo ln -s /run/shm /dev/shm
 
+  # install requirements
   - conda install --yes python=2.7 Cython=0.24 h5py=2.6.0 numpy=1.11.2 scipy=0.18.1 PyYAML=3.12 matplotlib pandas pytest
   - pip install --user --no-deps Theano==0.8.2 sgf==0.5 keras==1.1.2 pygtp==0.3
   - pip install --user flake8
-
 
   # install TensorFlow
   - if [[ "$KERAS_BACKEND" == "tensorflow" ]]; then
@@ -59,9 +60,10 @@ script:
 
     # run keras backend init to initialize backend config
     - python -c "import keras.backend"
-    # set up keras image_dim_ordering
+    # set keras image_dim_ordering to 'th'
     - sed -i -e 's/"image_dim_ordering":[[:space:]]*"[^"]*/"image_dim_ordering":\ "'th'/g' ~/.keras/keras.json;
-    # set up keras backend
+    # set keras backend to $KERAS_BACKEND ( 'tensorflow' or 'theano' )
     - sed -i -e 's/"backend":[[:space:]]*"[^"]*/"backend":\ "'$KERAS_BACKEND'/g' ~/.keras/keras.json;
 
+    # run unit test
     - python -m unittest discover
