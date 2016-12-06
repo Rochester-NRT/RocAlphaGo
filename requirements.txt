@@ -1,10 +1,10 @@
 Cython==0.24
 h5py==2.6.0
-Keras==1.0.8
-numpy==1.11.1
+Keras==1.1.2
+numpy==1.11.2
 pygtp==0.3
 PyYAML==3.12
-scipy==0.18.0
+scipy==0.18.1
 sgf==0.5
 six==1.10.0
 Theano==0.8.2

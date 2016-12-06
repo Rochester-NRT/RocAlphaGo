@@ -1,5 +1,10 @@
 import numpy as np
 import AlphaGo.go as go
+import keras.backend as K
+
+# This file is used anywhere that neural net features are used; setting the keras dimension ordering
+# here makes it universal to the project.
+K.set_image_dim_ordering('th')
 
 ##
 # individual feature functions (state --> tensor) begin here

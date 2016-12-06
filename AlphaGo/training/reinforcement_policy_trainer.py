@@ -2,117 +2,12 @@ import os
 import json
 import numpy as np
 from shutil import copyfile
-from keras.optimizers import Optimizer
+from keras.optimizers import SGD
 import keras.backend as K
 from AlphaGo.ai import ProbabilisticPolicyPlayer
 import AlphaGo.go as go
-from AlphaGo.go import GameState
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.util import flatten_idx
-
-
-class BatchedReinforcementLearningSGD(Optimizer):
-    '''A Keras Optimizer that sums gradients together for each game, applying them only once the
-    winner is known.
-
-    It is the responsibility of the calling code to call set_current_game() before each example to
-    tell the optimizer for which game gradients should be accumulated, and to call set_result() to
-    tell the optimizer what the sign of the gradient for each game should be and when all games are
-    over.
-
-    Arguments
-        lr: float >= 0. Learning rate.
-        ng: int > 0. Number of games played in parallel. Each one has its own cumulative gradient.
-    '''
-
-    def __init__(self, lr=0.01, ng=20, **kwargs):
-        super(BatchedReinforcementLearningSGD, self).__init__(**kwargs)
-        self.__dict__.update(locals())
-        self.lr = K.variable(lr)
-        self.cumulative_gradients = []
-        self.num_games = ng
-        self.game_idx = K.variable(0)  # which gradient to accumulate in the next batch.
-        self.gradient_sign = [K.variable(0) for _ in range(ng)]
-        self.running_games = K.variable(self.num_games)
-
-    def set_current_game(self, game_idx):
-        K.set_value(self.game_idx, game_idx)
-
-    def set_result(self, game_idx, won_game):
-        '''Mark the outcome of the game at index game_idx. Once all games are complete, updates
-        are automatically triggered in the next call to a keras fit function.
-        '''
-        K.set_value(self.gradient_sign[game_idx], +1 if won_game else -1)
-        # Note: using '-= 1' would create a new variable, which would invalidate the dependencies
-        # in get_updates().
-        K.set_value(self.running_games, K.get_value(self.running_games) - 1)
-
-    def get_updates(self, params, constraints, loss):
-        # Note: get_updates is called *once* by keras. Its job is to return a set of 'update
-        # operations' to any K.variable (e.g. model weights or self.num_games). Updates are applied
-        # whenever Keras' train_function is evaluated, i.e. in every batch. Model.fit_on_batch()
-        # will trigger exactly one update. All updates use the 'old' value of parameters - there is
-        # no dependency on the order of the list of updates.
-        self.updates = []
-        # Get expressions for gradients of model parameters.
-        grads = self.get_gradients(loss, params)
-        # Create a set of accumulated gradients, one for each game.
-        shapes = [K.get_variable_shape(p) for p in params]
-        self.cumulative_gradients = [[K.zeros(shape) for shape in shapes]
-                                     for _ in range(self.num_games)]
-
-        def conditional_update(cond, variable, new_value):
-            '''Helper function to create updates that only happen when cond is True. Writes to
-            self.updates and returns the new variable.
-
-            Note: K.update(x, x) is cheap, but K.update_add(x, K.zeros_like(x)) can be expensive.
-            '''
-            maybe_new_value = K.switch(cond, new_value, variable)
-            self.updates.append(K.update(variable, maybe_new_value))
-            return maybe_new_value
-
-        # Update cumulative gradient at index game_idx. This is done by returning an update for all
-        # gradients that is a no-op everywhere except for the game_idx'th one. When game_idx is
-        # changed by a call to set_current_game(), it will change the gradient that is getting
-        # accumulated.
-        # new_cumulative_gradients keeps references to the updated variables for use below in
-        # updating parameters with the freshly-accumulated gradients.
-        new_cumulative_gradients = [[None] * len(cgs) for cgs in self.cumulative_gradients]
-        for i, cgs in enumerate(self.cumulative_gradients):
-            for j, (g, cg) in enumerate(zip(grads, cgs)):
-                new_gradient = conditional_update(K.equal(self.game_idx, i), cg, cg + g)
-                new_cumulative_gradients[i][j] = new_gradient
-
-        # Compute the net update to parameters, taking into account the sign of each cumulative
-        # gradient.
-        net_grads = [K.zeros_like(g) for g in grads]
-        for i, cgs in enumerate(new_cumulative_gradients):
-            for j, cg in enumerate(cgs):
-                net_grads[j] += self.gradient_sign[i] * cg
-
-        # Trigger a full update when all games have finished.
-        self.trigger_update = K.lesser_equal(self.running_games, 0)
-
-        # Update model parameters conditional on trigger_update.
-        for p, g in zip(params, net_grads):
-            new_p = p + g * self.lr
-            if p in constraints:
-                c = constraints[p]
-                new_p = c(new_p)
-            conditional_update(self.trigger_update, p, new_p)
-
-        # 'reset' game counter and gradient signs when parameters are updated.
-        for sign in self.gradient_sign:
-            conditional_update(self.trigger_update, sign, K.variable(0))
-        conditional_update(self.trigger_update, self.running_games, K.variable(self.num_games))
-        return self.updates
-
-    def get_config(self):
-        config = {
-            'lr': float(K.get_value(self.lr)),
-            'ng': self.num_games}
-        base_config = super(BatchedReinforcementLearningSGD, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
 
 
 def _make_training_pair(st, mv, preprocessor):
@@ -123,17 +18,26 @@ def _make_training_pair(st, mv, preprocessor):
     return (st_tensor, mv_tensor)
 
 
-def run_n_games(optimizer, learner, opponent, num_games):
-    '''Run num_games games to completion, calling train_batch() on each position
-    the learner sees.
+def run_n_games(optimizer, learner, opponent, num_games, mock_states=[]):
+    '''Run num_games games to completion, keeping track of each position and move of the learner.
 
-    (Note: optimizer only accumulates gradients in its update function until
-    all games have finished)
-
+    (Note: learning cannot happen until all games have completed)
     '''
+
     board_size = learner.policy.model.input_shape[-1]
-    states = [GameState(size=board_size) for _ in range(num_games)]
+    states = [go.GameState(size=board_size) for _ in range(num_games)]
     learner_net = learner.policy.model
+
+    # Allowing injection of a mock state object for testing purposes
+    if mock_states:
+        states = mock_states
+
+    # Create one list of features (aka state tensors) and one of moves for each game being played.
+    state_tensors = [[] for _ in range(num_games)]
+    move_tensors = [[] for _ in range(num_games)]
+
+    # List of booleans indicating whether the 'learner' player won.
+    learner_won = [None] * num_games
 
     # Start all odd games with moves by 'opponent'. Even games will have 'learner' black.
     learner_color = [go.BLACK if i % 2 == 0 else go.WHITE for i in range(num_games)]
@@ -144,8 +48,6 @@ def run_n_games(optimizer, learner, opponent, num_games):
 
     current = learner
     other = opponent
-    # Need to keep track of the index of unfinished states so that we can communicate which one is
-    # being updated to the optimizer.
     idxs_to_unfinished_states = {i: states[i] for i in range(num_games)}
     while len(idxs_to_unfinished_states) > 0:
         # Get next moves by current player for all unfinished states.
@@ -153,22 +55,17 @@ def run_n_games(optimizer, learner, opponent, num_games):
         just_finished = []
         # Do each move to each state in order.
         for (idx, state), mv in zip(idxs_to_unfinished_states.iteritems(), moves):
-            # Order is important here. We must first get the training pair on the unmodified state.
-            # Next, the state is updated and checked to see if the game is over. If it is over, the
-            # optimizer is notified via set_result. Finally, train_on_batch is called, which
-            # will trigger an update of all parameters only if set_result() has been called
-            # for all games already (so set_result must come before train_on_batch).
+            # Order is important here. We must get the training pair on the unmodified state before
+            # updating it with do_move.
             is_learnable = current is learner and mv is not go.PASS_MOVE
             if is_learnable:
-                (X, y) = _make_training_pair(state, mv, learner.policy.preprocessor)
+                (st_tensor, mv_tensor) = _make_training_pair(state, mv, learner.policy.preprocessor)
+                state_tensors[idx].append(st_tensor)
+                move_tensors[idx].append(mv_tensor)
             state.do_move(mv)
             if state.is_end_of_game:
-                learner_is_winner = state.get_winner() == learner_color[idx]
-                optimizer.set_result(idx, learner_is_winner)
+                learner_won[idx] = state.get_winner() == learner_color[idx]
                 just_finished.append(idx)
-            if is_learnable:
-                optimizer.set_current_game(idx)
-                learner_net.train_on_batch(X, y)
 
         # Remove games that have finished from dict.
         for idx in just_finished:
@@ -176,6 +73,14 @@ def run_n_games(optimizer, learner, opponent, num_games):
 
         # Swap 'current' and 'other' for next turn.
         current, other = other, current
+
+    # Train on each game's results, setting the learning rate negative to 'unlearn' positions from
+    # games where the learner lost.
+    base_lr = optimizer.lr.get_value()
+    for (st_tensor, mv_tensor, won) in zip(state_tensors, move_tensors, learner_won):
+        optimizer.lr.set_value(base_lr * (+1 if won else -1))
+        learner_net.train_on_batch(np.concatenate(st_tensor, axis=0),
+                                   np.concatenate(mv_tensor, axis=0))
 
     # Return the win ratio.
     wins = sum(state.get_winner() == pc for (state, pc) in zip(states, learner_color))
@@ -276,7 +181,7 @@ def run_training(cmd_line_args=None):
         with open(os.path.join(args.out_directory, "metadata.json"), "w") as f:
             json.dump(metadata, f, sort_keys=True, indent=2)
 
-    optimizer = BatchedReinforcementLearningSGD(lr=args.learning_rate, ng=args.game_batch)
+    optimizer = SGD(lr=args.learning_rate)
     player.policy.model.compile(loss=log_loss, optimizer=optimizer)
     for i_iter in range(1, args.iterations + 1):
         # Randomly choose opponent from pool (possibly self), and playing
@@ -289,8 +194,8 @@ def run_training(cmd_line_args=None):
         if args.verbose:
             print("Batch {}\tsampled opponent is {}".format(i_iter, opp_weights))
 
-        # Run games (and learn from results). Keep track of the win ratio vs
-        # each opponent over time.
+        # Run games (and learn from results). Keep track of the win ratio vs each opponent over
+        # time.
         win_ratio = run_n_games(optimizer, player, opponent, args.game_batch)
         metadata["win_ratio"][player_weights] = (opp_weights, win_ratio)
 
