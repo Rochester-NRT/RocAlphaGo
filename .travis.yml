@@ -6,10 +6,16 @@ matrix:
     include:
         - python: 3.5
           env: KERAS_BACKEND=theano
+        - python: 3.5
+          env: KERAS_BACKEND=tensorflow
         - python: 3.4
           env: KERAS_BACKEND=theano
+        - python: 3.4
+          env: KERAS_BACKEND=tensorflow
         - python: 3.3
           env: KERAS_BACKEND=theano
+        - python: 3.3
+          env: KERAS_BACKEND=tensorflow
         - python: 2.7
           env: KERAS_BACKEND=theano
         - python: 2.7
@@ -32,6 +38,9 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
+  
+  - conda create -q -n RocAlphaGo-test python=$TRAVIS_PYTHON_VERSION
+  - source activate RocAlphaGo-test
 
   # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
   - sudo rm -rf /dev/shm
