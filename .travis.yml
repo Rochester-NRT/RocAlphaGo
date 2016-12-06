@@ -52,23 +52,21 @@ install:
   - pip install --user flake8
 
   # install TensorFlow
-  - if [[ "$KERAS_BACKEND" == "tensorflow" ]]; then
-      if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp27-none-linux_x86_64.whl;
-      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
-      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
-      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl;
-      fi
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp27-none-linux_x86_64.whl;
+    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
+    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
+    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl;
     fi
 # run flake8 and unit tests
 script:
     - flake8
 
     # run keras backend init to initialize backend config
-    # - python -c "import keras.backend"
+    - python -c "import keras.backend"
     # set keras image_dim_ordering to 'th'
     - sed -i -e 's/"image_dim_ordering":[[:space:]]*"[^"]*/"image_dim_ordering":\ "'th'/g' ~/.keras/keras.json;
     # set keras backend to $KERAS_BACKEND ( 'tensorflow' or 'theano' )
