@@ -68,7 +68,7 @@ script:
     - flake8
 
     # run keras backend init to initialize backend config
-    - python -c "import keras.backend"
+    # - python -c "import keras.backend"
     # set keras image_dim_ordering to 'th'
     - sed -i -e 's/"image_dim_ordering":[[:space:]]*"[^"]*/"image_dim_ordering":\ "'th'/g' ~/.keras/keras.json;
     # set keras backend to $KERAS_BACKEND ( 'tensorflow' or 'theano' )
