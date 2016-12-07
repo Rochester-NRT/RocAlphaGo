@@ -43,7 +43,7 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
 
     def testTrain(self):
         model = os.path.join('tests', 'test_data', 'minimodel.json')
-        init_weights = os.path.join('tests', 'test_data', 'hdf5', 
+        init_weights = os.path.join('tests', 'test_data', 'hdf5',
                                     'random_minimodel_weights_' + K.backend() + '.hdf5')
         output = os.path.join('tests', 'test_data', '.tmp.rl.training/')
         args = [model, init_weights, output, '--game-batch', '1', '--iterations', '1']
