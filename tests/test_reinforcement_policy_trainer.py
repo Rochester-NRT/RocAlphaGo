@@ -7,6 +7,7 @@ import AlphaGo.go as go
 from keras.optimizers import SGD
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.util import sgf_iter_states
+import keras.backend as K
 
 
 class MockPlayer(object):
@@ -42,7 +43,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
 
     def testTrain(self):
         model = os.path.join('tests', 'test_data', 'minimodel.json')
-        init_weights = os.path.join('tests', 'test_data', 'hdf5', 'random_minimodel_weights.hdf5')
+        init_weights = os.path.join('tests', 'test_data', 'hdf5',
+                                    'random_minimodel_weights_' + K.backend() + '.hdf5')
         output = os.path.join('tests', 'test_data', '.tmp.rl.training/')
         args = [model, init_weights, output, '--game-batch', '1', '--iterations', '1']
         run_training(args)
