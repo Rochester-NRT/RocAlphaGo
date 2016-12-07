@@ -78,7 +78,7 @@ def run_n_games(optimizer, learner, opponent, num_games, mock_states=[]):
     # games where the learner lost.
     base_lr = optimizer.lr
     for (st_tensor, mv_tensor, won) in zip(state_tensors, move_tensors, learner_won):
-        optimizer.lr =base_lr * (+1 if won else -1)
+        optimizer.lr = base_lr * (+1 if won else -1)
         learner_net.train_on_batch(np.concatenate(st_tensor, axis=0),
                                    np.concatenate(mv_tensor, axis=0))
 
