@@ -89,9 +89,10 @@ def run_n_games(optimizer, learner, opponent, num_games, mock_states=[]):
 
 def log_loss(y_true, y_pred):
     '''Keras 'loss' function for the REINFORCE algorithm, where y_true is the action that was
-    taken, and updates with the positive gradient will make that action more likely.
+    taken, and updates with the negative gradient will make that action more likely. We use the
+    negative gradient because keras expects training data to minimize a loss function.
     '''
-    return y_true * K.log(K.clip(y_pred, K.epsilon(), 1.0 - K.epsilon()))
+    return -y_true * K.log(K.clip(y_pred, K.epsilon(), 1.0 - K.epsilon()))
 
 
 def run_training(cmd_line_args=None):

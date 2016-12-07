@@ -10,10 +10,27 @@ from AlphaGo.util import sgf_iter_states
 import keras.backend as K
 
 
+MOCK_GAME = "tests/test_data/sgf/20160312-Lee-Sedol-vs-AlphaGo.sgf"
+
+
+def get_sgf_move_probs(sgf_game, policy, player):
+    with open(sgf_game, "r") as f:
+        sgf_game = f.read()
+
+    def get_single_prob(move, move_probs):
+        for (mv, prob) in move_probs:
+            if move == mv:
+                return prob
+        return 0
+
+    return [(move, get_single_prob(move, policy.eval_state(state)))
+            for (state, move, pl) in sgf_iter_states(sgf_game) if pl == player]
+
+
 class MockPlayer(object):
 
-    def __init__(self, policy):
-        with open("tests/test_data/sgf/20160312-Lee-Sedol-vs-AlphaGo.sgf", "r") as f:
+    def __init__(self, policy, sgf_game):
+        with open(sgf_game, "r") as f:
             sgf_game = f.read()
         self.moves = [move for (_, move, _) in sgf_iter_states(sgf_game)]
         self.policy = policy
@@ -66,8 +83,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             optimizer = SGD(lr=0.001)
             policy1.model.compile(loss=log_loss, optimizer=optimizer)
 
-            learner = MockPlayer(policy1)
-            opponent = MockPlayer(policy2)
+            learner = MockPlayer(policy1, MOCK_GAME)
+            opponent = MockPlayer(policy2, MOCK_GAME)
 
             # Run RL training
             run_n_games(optimizer, learner, opponent, 2, mock_states=states)
@@ -99,8 +116,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
     def testRunNGamesUpdatesWeights(self):
         policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
         policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
-        learner = MockPlayer(policy1)
-        opponent = MockPlayer(policy2)
+        learner = MockPlayer(policy1, MOCK_GAME)
+        opponent = MockPlayer(policy2, MOCK_GAME)
         optimizer = SGD()
         init_weights = policy1.model.get_weights()
         policy1.model.compile(loss=log_loss, optimizer=optimizer)
@@ -114,6 +131,54 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
         # Assert that some parameters changed.
         any_change = any(not np.array_equal(i, t) for (i, t) in zip(init_weights, trained_weights))
         self.assertTrue(any_change)
+
+    def testWinIncreasesMoveProbability(self):
+        # Create "mock" state that ends after 20 moves with the learner winnning
+        win_state = [MockState(go.BLACK, 20, size=19)]
+        policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
+        policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
+        learner = MockPlayer(policy1, MOCK_GAME)
+        opponent = MockPlayer(policy2, MOCK_GAME)
+        optimizer = SGD()
+        policy1.model.compile(loss=log_loss, optimizer=optimizer)
+
+        # Get initial (before learning) move probabilities for all moves made by black
+        init_move_probs = get_sgf_move_probs(MOCK_GAME, policy1, go.BLACK)
+        init_probs = [prob for (mv, prob) in init_move_probs]
+
+        # Run RL training
+        run_n_games(optimizer, learner, opponent, 1, mock_states=win_state)
+
+        # Get new move probabilities for black's moves having finished 1 round of training
+        new_move_probs = get_sgf_move_probs(MOCK_GAME, policy1, go.BLACK)
+        new_probs = [prob for (mv, prob) in new_move_probs]
+
+        # Assert that, on average, move probabilities for black increased having won.
+        self.assertTrue(sum((new_probs[i] - init_probs[i]) for i in range(10)) > 0)
+
+    def testLoseDecreasesMoveProbability(self):
+        # Create "mock" state that ends after 20 moves with the learner losing
+        lose_state = [MockState(go.WHITE, 20, size=19)]
+        policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
+        policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel.json'))
+        learner = MockPlayer(policy1, MOCK_GAME)
+        opponent = MockPlayer(policy2, MOCK_GAME)
+        optimizer = SGD()
+        policy1.model.compile(loss=log_loss, optimizer=optimizer)
+
+        # Get initial (before learning) move probabilities for all moves made by black
+        init_move_probs = get_sgf_move_probs(MOCK_GAME, policy1, go.BLACK)
+        init_probs = [prob for (mv, prob) in init_move_probs]
+
+        # Run RL training
+        run_n_games(optimizer, learner, opponent, 1, mock_states=lose_state)
+
+        # Get new move probabilities for black's moves having finished 1 round of training
+        new_move_probs = get_sgf_move_probs(MOCK_GAME, policy1, go.BLACK)
+        new_probs = [prob for (mv, prob) in new_move_probs]
+
+        # Assert that, on average, move probabilities for black decreased having lost.
+        self.assertTrue(sum((new_probs[i] - init_probs[i]) for i in range(10)) < 0)
 
 
 if __name__ == '__main__':
