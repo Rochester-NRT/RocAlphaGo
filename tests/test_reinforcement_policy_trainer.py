@@ -142,7 +142,7 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             trained_weights = policy1.model.get_weights()
 
             # Assert that some parameters changed.
-            any_change = any(not np.array_equal(i, t) 
+            any_change = any(not np.array_equal(i, t)
                              for (i, t) in zip(init_weights, trained_weights))
             self.assertTrue(any_change)
 
