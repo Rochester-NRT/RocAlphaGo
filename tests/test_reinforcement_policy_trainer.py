@@ -10,8 +10,10 @@ from AlphaGo.util import sgf_iter_states
 
 SGF_FOLDER = "tests/test_data/sgf/"
 
+
 def _is_sgf(fname):
     return fname.strip()[-4:] == ".sgf"
+
 
 def _list_mock_games(path):
     """helper function to get all SGF files in a directory (does not recurse)
@@ -144,7 +146,7 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             self.assertTrue(any_change)
 
         for f in _list_mock_games(SGF_FOLDER):
-            test_game_run_N(f)       
+            test_game_run_N(f)
 
     def testWinIncreasesMoveProbability(self):
         def test_game_increase(game):
@@ -202,5 +204,6 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
         for f in _list_mock_games(SGF_FOLDER):
             test_game_decrease(f)
 
+            
 if __name__ == '__main__':
     unittest.main()
