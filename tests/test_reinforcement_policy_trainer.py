@@ -142,7 +142,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             trained_weights = policy1.model.get_weights()
 
             # Assert that some parameters changed.
-            any_change = any(not np.array_equal(i, t) for (i, t) in zip(init_weights, trained_weights))
+            any_change = any(not np.array_equal(i, t) 
+                             for (i, t) in zip(init_weights, trained_weights))
             self.assertTrue(any_change)
 
         for f in _list_mock_games(SGF_FOLDER):
@@ -204,6 +205,6 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
         for f in _list_mock_games(SGF_FOLDER):
             test_game_decrease(f)
 
-            
+
 if __name__ == '__main__':
     unittest.main()
