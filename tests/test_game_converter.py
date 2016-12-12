@@ -6,7 +6,7 @@ import os
 
 class TestSGFLoading(unittest.TestCase):
     def test_ab_aw(self):
-        with open('tests/test_data/sgf/ab_aw.sgf', 'r') as f:
+        with open('tests/test_data/sgf_with_handicap/ab_aw.sgf', 'r') as f:
             sgf_to_gamestate(f.read())
 
 
