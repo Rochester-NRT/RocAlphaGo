@@ -33,9 +33,9 @@ def shuffled_hdf5_batch_generator(state_dataset, action_dataset,
             # get state from dataset and transform it.
             # loop comprehension is used so that the transformation acts on the
             # 3rd and 4th dimensions
-            state = np.array([transform(plane) for plane in state_dataset[data_idx]])
+            state = np.array([transform(plane) for plane in state_dataset[data_idx[0]]])
             # must be cast to a tuple so that it is interpreted as (x,y) not [(x,:), (y,:)]
-            action_xy = tuple(action_dataset[data_idx])
+            action_xy = tuple(action_dataset[data_idx[0]])
             action = transform(one_hot_action(action_xy, game_size))
             Xbatch[batch_idx] = state
             Ybatch[batch_idx] = action.flatten()
@@ -85,6 +85,57 @@ BOARD_TRANSFORMATIONS = {
 }
 
 
+def load_indices_from_file(symmetries, shuffle_file):
+    # load indices from file
+    with open(shuffle_file, "r") as f:
+        indices = np.load(f)
+
+    return indices
+
+
+def set_indices(args, n_total_data_size, symmetries, shuffle_file_train, shuffle_file_val):
+
+    # create array with all position, symmetry combinations
+    shuffle_indices = np.empty(shape=[n_total_data_size * len(symmetries), 2], dtype=int)
+    for x in range(n_total_data_size):
+        for y in range(len(symmetries)):
+            shuffle_indices[x * len(symmetries) + y][0] = x
+            shuffle_indices[x * len(symmetries) + y][1] = y
+
+    # shuffle array
+    np.random.shuffle(shuffle_indices)
+    
+    print(len(shuffle_indices))
+    print(shuffle_indices)
+
+    # validation set size
+    n_val_data = int(args.train_val_test[1] * len(shuffle_indices))
+    # limit validation set to --max-validation
+    if n_val_data > args.max_validation:
+        n_val_data = args.max_validation
+
+    # train set size
+    n_train_data = len(shuffle_indices) - n_val_data
+    
+    # training set
+    train_indices = shuffle_indices[0:n_train_data]
+    # train_indices = shuffle_indices[shuffle_indices[:,1] <= n_train_data, :]
+
+    # save training set
+    with open(shuffle_file_train, "w") as f:
+        np.save(f, train_indices)
+
+    # validation set
+    val_indices = shuffle_indices[n_train_data:n_train_data + n_val_data]
+    # val_indices = shuffle_indices[shuffle_indices[:,1] <= n_train_data, :]
+
+    # save validation set
+    with open(shuffle_file_val, "w") as f:
+        np.save(f, val_indices)
+
+    return train_indices, val_indices
+
+
 def run_training(cmd_line_args=None):
     """Run training. command-line args may be passed in as a list
     """
@@ -104,6 +155,7 @@ def run_training(cmd_line_args=None):
     # slightly fancier args
     parser.add_argument("--weights", help="Name of a .h5 weights file (in the output directory) to load to resume training", default=None)  # noqa: E501
     parser.add_argument("--train-val-test", help="Fraction of data to use for training/val/test. Must sum to 1. Invalid if restarting training", nargs=3, type=float, default=[0.93, .05, .02])  # noqa: E501
+    parser.add_argument("--max-validation", help="maximum validation set size", type=int, default=5000000)  # noqa: E501
     parser.add_argument("--symmetries", help="Comma-separated list of transforms, subset of noop,rot90,rot180,rot270,fliplr,flipud,diag1,diag2", default='noop,rot90,rot180,rot270,fliplr,flipud,diag1,diag2')  # noqa: E501
     # TODO - an argument to specify which transformations to use, put it in metadata
 
@@ -162,20 +214,6 @@ def run_training(cmd_line_args=None):
             print("Verified agreement of number of model and dataset feature planes, but cannot "
                   "verify exact match using old dataset format.")
 
-    n_total_data = len(dataset["states"])
-    n_train_data = int(args.train_val_test[0] * n_total_data)
-    # Need to make sure training data is divisible by minibatch size or get
-    # warning mentioning accuracy from keras
-    n_train_data = n_train_data - (n_train_data % args.minibatch)
-    n_val_data = n_total_data - n_train_data
-    # n_test_data = n_total_data - (n_train_data + n_val_data)
-
-    if args.verbose:
-        print("datset loaded")
-        print("\t%d total samples" % n_total_data)
-        print("\t%d training samples" % n_train_data)
-        print("\t%d validaion samples" % n_val_data)
-
     # ensure output directory is available
     if not os.path.exists(args.out_directory):
         os.makedirs(args.out_directory)
@@ -208,29 +246,40 @@ def run_training(cmd_line_args=None):
     checkpoint_template = os.path.join(args.out_directory, "weights.{epoch:05d}.hdf5")
     checkpointer = ModelCheckpoint(checkpoint_template)
 
-    # load precomputed random-shuffle indices or create them
-    # TODO - save each train/val/test indices separately so there's no danger of
-    # changing args.train_val_test when resuming
-    shuffle_file = os.path.join(args.out_directory, "shuffle.npz")
-    if os.path.exists(shuffle_file) and resume:
-        with open(shuffle_file, "r") as f:
-            shuffle_indices = np.load(f)
+    # used symmetries
+    # symmetry_names = args.symmetries.strip().split(",")
+    symmetries = [BOARD_TRANSFORMATIONS[name] for name in args.symmetries.strip().split(",")]
+
+    # shuffle file locations
+    shuffle_file_train = os.path.join(args.out_directory, "shuffle_train.npz")
+    shuffle_file_val = os.path.join(args.out_directory, "shuffle_validate.npz")
+    # TODO usage of test set?
+    # shuffle_file_test = os.path.join(args.out_directory, "shuffle_test.npz")
+
+    # check file existence and resume
+    if os.path.exists(shuffle_file_train) and os.path.exists(shuffle_file_val) and resume:
+        # load from .npz files
+        train_indices = load_indices_from_file(BOARD_TRANSFORMATIONS, shuffle_file_train)
+        val_indices = load_indices_from_file(BOARD_TRANSFORMATIONS, shuffle_file_val)
+        # test_indices = load_indices_from_file(BOARD_TRANSFORMATIONS, shuffle_file_test)
+
         if args.verbose:
             print("loading previous data shuffling indices")
     else:
-        # create shuffled indices
-        shuffle_indices = np.random.permutation(n_total_data)
-        with open(shuffle_file, "w") as f:
-            np.save(f, shuffle_indices)
+        # shuffle data, add rotations, save rotations to files
+        train_indices, val_indices = set_indices(args, len(dataset["states"]), 
+                                                 symmetries, shuffle_file_train, shuffle_file_val)
+
         if args.verbose:
             print("created new data shuffling indices")
-    # training indices are the first consecutive set of shuffled indices, val
-    # next, then test gets the remainder
-    train_indices = shuffle_indices[0:n_train_data]
-    val_indices = shuffle_indices[n_train_data:n_train_data + n_val_data]
-    # test_indices = shuffle_indices[n_train_data + n_val_data:]
 
-    symmetries = [BOARD_TRANSFORMATIONS[name] for name in args.symmetries.strip().split(",")]
+    if args.verbose:
+        print("dataset loaded")
+        print("\t%d total samples" % (len(dataset["states"]) * len(symmetries)))
+        print("\t%d total samples check" % (len(train_indices) + len(val_indices)))
+        print("\t%d training samples" % len(train_indices))
+        print("\t%d validation samples" % len(val_indices))
+        print("\t%d test samples" % 0)
 
     # create dataset generators
     train_data_generator = shuffled_hdf5_batch_generator(
@@ -249,7 +298,7 @@ def run_training(cmd_line_args=None):
     sgd = SGD(lr=args.learning_rate, decay=args.decay)
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=["accuracy"])
 
-    samples_per_epoch = args.epoch_length or n_train_data
+    samples_per_epoch = args.epoch_length or len(train_indices)
 
     if args.verbose:
         print("STARTING TRAINING")
@@ -260,7 +309,7 @@ def run_training(cmd_line_args=None):
         nb_epoch=args.epochs,
         callbacks=[checkpointer, meta_writer],
         validation_data=val_data_generator,
-        nb_val_samples=n_val_data)
+        nb_val_samples=len(val_indices))
 
 
 if __name__ == '__main__':
