@@ -1,26 +1,54 @@
+sudo: required # https://docs.travis-ci.com/user/trusty-ci-environment/
+dist: trusty   # both needed to install tensorflow correctly
 language: python
-python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-# Setup anaconda
-before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda2/bin:$PATH
-  - conda update --yes conda
+# tested python language / keras backends matrix
+matrix:
+    include:
+        - python: 2.7
+          env: KERAS_BACKEND=theano
+        - python: 2.7
+          env: KERAS_BACKEND=tensorflow
+
+# Install packages
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
+
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  # http://conda.pydata.org/docs/commands.html
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  
+  # create and activiate environment with python=$TRAVIS_PYTHON_VERSION
+  - conda create -q -n RocAlphaGo-test python=$TRAVIS_PYTHON_VERSION
+  - source activate RocAlphaGo-test
+
   # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
   - sudo rm -rf /dev/shm
   - sudo ln -s /run/shm /dev/shm
-# Install packages
-install:
-  - conda install --yes python=2.7 Cython=0.24 h5py=2.6.0 numpy=1.11.2 scipy=0.18.1 PyYAML=3.12 matplotlib pandas pytest
+
+  # install requirements
+  - conda install --yes Cython=0.24 h5py=2.6.0 numpy=1.11.2 scipy=0.18.1 PyYAML=3.12 matplotlib pandas pytest
   - pip install --user --no-deps Theano==0.8.2 sgf==0.5 keras==1.1.2 pygtp==0.3
   - pip install --user flake8
 
+  # install TensorFlow if needed
+  # tensorflow does not have a python3.3 wheel
+  - if [[ "$KERAS_BACKEND" == "tensorflow" ]]; then
+      if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp27-none-linux_x86_64.whl;
+      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
+        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp34-cp34m-linux_x86_64.whl;
+      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl;
+      fi
+    fi
 # run flake8 and unit tests
 script:
     - flake8
-    - THEANO_FLAGS="gcc.cxxflags='-march=core2'" KERAS_BACKEND=theano python -m unittest discover
+    
+    # run unit test
+    - python -m unittest discover
