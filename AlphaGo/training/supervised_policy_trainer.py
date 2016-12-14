@@ -28,14 +28,14 @@ def shuffled_hdf5_batch_generator(state_dataset, action_dataset,
     batch_idx = 0
     while True:
         for data_idx in indices:
-            # choose a random transformation of the data (rotations/reflections of the board)
-            transform = np.random.choice(transforms)
+            # get rotation symmetry belonging to state
+            transform = transforms[data_idx[1]]
             # get state from dataset and transform it.
             # loop comprehension is used so that the transformation acts on the
             # 3rd and 4th dimensions
-            state = np.array([transform(plane) for plane in state_dataset[data_idx]])
+            state = np.array([transform(plane) for plane in state_dataset[data_idx[0]]])
             # must be cast to a tuple so that it is interpreted as (x,y) not [(x,:), (y,:)]
-            action_xy = tuple(action_dataset[data_idx])
+            action_xy = tuple(action_dataset[data_idx[0]])
             action = transform(one_hot_action(action_xy, game_size))
             Xbatch[batch_idx] = state
             Ybatch[batch_idx] = action.flatten()
@@ -73,16 +73,155 @@ class MetadataWriterCallback(Callback):
             json.dump(self.metadata, f, indent=2)
 
 
-BOARD_TRANSFORMATIONS = {
-    "noop": lambda feature: feature,
-    "rot90": lambda feature: np.rot90(feature, 1),
-    "rot180": lambda feature: np.rot90(feature, 2),
-    "rot270": lambda feature: np.rot90(feature, 3),
-    "fliplr": lambda feature: np.fliplr(feature),
-    "flipud": lambda feature: np.flipud(feature),
-    "diag1": lambda feature: np.transpose(feature),
-    "diag2": lambda feature: np.fliplr(np.rot90(feature, 1))
+TRANSFORMATION_INDICES = {
+    "noop": 0,
+    "rot90": 1,
+    "rot180": 2,
+    "rot270": 3,
+    "fliplr": 4,
+    "flipud": 5,
+    "diag1": 6,
+    "diag2": 7
 }
+
+BOARD_TRANSFORMATIONS = {
+    0: lambda feature: feature,
+    1: lambda feature: np.rot90(feature, 1),
+    2: lambda feature: np.rot90(feature, 2),
+    3: lambda feature: np.rot90(feature, 3),
+    4: lambda feature: np.fliplr(feature),
+    5: lambda feature: np.flipud(feature),
+    6: lambda feature: np.transpose(feature),
+    7: lambda feature: np.fliplr(np.rot90(feature, 1))
+}
+
+
+def load_indices_from_file(shuffle_file):
+    # load indices from shuffle_file
+    with open(shuffle_file, "r") as f:
+        indices = np.load(f)
+
+    return indices
+
+
+def save_indices_to_file(shuffle_file, indices):
+    # save indices to shuffle_file
+    with open(shuffle_file, "w") as f:
+        np.save(f, indices)
+
+
+def create_and_save_shuffle_indices(minibatch_size, train_val_test, max_validation,
+                                    n_total_data_size, symmetries, shuffle_file_train,
+                                    shuffle_file_val, shuffle_file_test):
+    """ create an array with all unique state and symmetry pairs,
+        calculate test/validation/training set sizes,
+        seperate those sets and save them to seperate files.
+    """
+
+    # Create an array with a unique row for each combination of a training example
+    # and a symmetry.
+    # shuffle_indices[i][0] is an index into training examples,
+    # shuffle_indices[i][1] is the index (from 0 to 7) of the symmetry transformation to apply
+    shuffle_indices = np.empty(shape=[n_total_data_size * len(symmetries), 2], dtype=int)
+    for dataset_idx in range(n_total_data_size):
+        for symmetry_idx in range(len(symmetries)):
+            shuffle_indices[dataset_idx * len(symmetries) + symmetry_idx][0] = dataset_idx
+            shuffle_indices[dataset_idx * len(symmetries) +
+                            symmetry_idx][1] = symmetries[symmetry_idx]
+
+    # shuffle rows without affecting x,y pairs
+    np.random.shuffle(shuffle_indices)
+
+    # validation set size
+    n_val_data = int(train_val_test[1] * len(shuffle_indices))
+    # limit validation set to --max-validation
+    if n_val_data > max_validation:
+        n_val_data = max_validation
+
+    # test set size
+    n_test_data = int(train_val_test[2] * len(shuffle_indices))
+
+    # train set size
+    n_train_data = len(shuffle_indices) - n_val_data - n_test_data
+
+    # Need to make sure training data is divisible by minibatch size or get
+    # warning mentioning accuracy from keras
+    remainder = n_train_data % minibatch_size
+    n_train_data -= remainder
+    n_test_data += remainder
+
+    # create training set and save
+    train_indices = shuffle_indices[0:n_train_data]
+    save_indices_to_file(shuffle_file_train, train_indices)
+
+    # create validation set and save
+    val_indices = shuffle_indices[n_train_data:n_train_data + n_val_data]
+    save_indices_to_file(shuffle_file_val, val_indices)
+
+    # create test set and save
+    test_indices = shuffle_indices[n_train_data + n_val_data:
+                                   n_train_data + n_val_data + n_test_data]
+    save_indices_to_file(shuffle_file_test, test_indices)
+
+    return train_indices, val_indices, test_indices
+
+
+def get_train_val_test_indices(args, meta_writer, resume, dataset):
+
+    # used symmetries
+    if args.symmetries == "all":
+        # add all symmetries
+        symmetries = [TRANSFORMATION_INDICES[name] for name in TRANSFORMATION_INDICES]
+    elif args.symmetries == "none":
+        # only add standart orientation
+        symmetries = [TRANSFORMATION_INDICES["noop"]]
+    else:
+        # add specified symmetries
+        symmetries = [TRANSFORMATION_INDICES[name] for name in args.symmetries.strip().split(",")]
+
+    # shuffle file locations for train/validation/test set
+    shuffle_file_train = os.path.join(args.out_directory, "shuffle_train.npz")
+    shuffle_file_val = os.path.join(args.out_directory, "shuffle_validate.npz")
+    shuffle_file_test = os.path.join(args.out_directory, "shuffle_test.npz")
+
+    # check train/validation/test shuffle file existence, resume,
+    # train_data file is the same and amount of states is equal
+    if resume and os.path.exists(shuffle_file_train) and os.path.exists(shuffle_file_val) and \
+       os.path.exists(shuffle_file_test) and \
+       meta_writer.metadata["training_data"] == args.train_data and \
+       meta_writer.metadata["available_states"] == len(dataset["states"]):
+        # load from .npz files
+        train_indices = load_indices_from_file(shuffle_file_train)
+        val_indices = load_indices_from_file(shuffle_file_val)
+        test_indices = load_indices_from_file(shuffle_file_test)
+
+        if args.verbose:
+            print("loading previous data shuffling indices")
+    else:
+        # shuffle data, add rotations, save rotations to files
+        train_indices, val_indices, test_indices = create_and_save_shuffle_indices(
+                args.minibatch, args.train_val_test, args.max_validation, len(dataset["states"]),
+                symmetries, shuffle_file_train, shuffle_file_val, shuffle_file_test)
+
+        # save amount of states to metadata
+        meta_writer.metadata["available_states"] = len(dataset["states"])
+        # save training data file to metadata
+        meta_writer.metadata["training_data"] = args.train_data
+
+        if args.verbose:
+            print("created new data shuffling indices")
+
+    if args.verbose:
+        print("dataset loaded")
+        print("\t%d total positions" % len(dataset["states"]))
+        print("\t%d total samples" % (len(dataset["states"]) * len(symmetries)))
+        print("\t%d total samples check" % (len(train_indices) +
+              len(val_indices) + len(test_indices)))
+        print("\t%d training samples" % len(train_indices))
+        print("\t%d validation samples" % len(val_indices))
+        print("\t%d test samples" % len(test_indices))
+
+    return train_indices, val_indices, test_indices
 
 
 def run_training(cmd_line_args=None):
@@ -103,8 +242,9 @@ def run_training(cmd_line_args=None):
     parser.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")  # noqa: E501
     # slightly fancier args
     parser.add_argument("--weights", help="Name of a .h5 weights file (in the output directory) to load to resume training", default=None)  # noqa: E501
-    parser.add_argument("--train-val-test", help="Fraction of data to use for training/val/test. Must sum to 1. Invalid if restarting training", nargs=3, type=float, default=[0.93, .05, .02])  # noqa: E501
-    parser.add_argument("--symmetries", help="Comma-separated list of transforms, subset of noop,rot90,rot180,rot270,fliplr,flipud,diag1,diag2", default='noop,rot90,rot180,rot270,fliplr,flipud,diag1,diag2')  # noqa: E501
+    parser.add_argument("--train-val-test", help="Fraction of data to use for training/val/test. Must sum to 1. Invalid if restarting training", nargs=3, type=float, default=[0.95, .05, .0])  # noqa: E501
+    parser.add_argument("--max-validation", help="maximum validation set size", type=int, default=5000000)  # noqa: E501
+    parser.add_argument("--symmetries", help="none, all or comma-separated list of transforms, subset of noop,rot90,rot180,rot270,fliplr,flipud,diag1,diag2", default='all')  # noqa: E501
     # TODO - an argument to specify which transformations to use, put it in metadata
 
     if cmd_line_args is None:
@@ -162,20 +302,6 @@ def run_training(cmd_line_args=None):
             print("Verified agreement of number of model and dataset feature planes, but cannot "
                   "verify exact match using old dataset format.")
 
-    n_total_data = len(dataset["states"])
-    n_train_data = int(args.train_val_test[0] * n_total_data)
-    # Need to make sure training data is divisible by minibatch size or get
-    # warning mentioning accuracy from keras
-    n_train_data = n_train_data - (n_train_data % args.minibatch)
-    n_val_data = n_total_data - n_train_data
-    # n_test_data = n_total_data - (n_train_data + n_val_data)
-
-    if args.verbose:
-        print("datset loaded")
-        print("\t%d total samples" % n_total_data)
-        print("\t%d training samples" % n_train_data)
-        print("\t%d validaion samples" % n_val_data)
-
     # ensure output directory is available
     if not os.path.exists(args.out_directory):
         os.makedirs(args.out_directory)
@@ -197,40 +323,25 @@ def run_training(cmd_line_args=None):
     #
     # TODO - model and train_data are saved in meta_file; check that they match
     # (and make args optional when restarting?)
-    meta_writer.metadata["training_data"] = args.train_data
     meta_writer.metadata["model_file"] = args.model
     # Record all command line args in a list so that all args are recorded even
     # when training is stopped and resumed.
-    meta_writer.metadata["cmd_line_args"] \
-        = meta_writer.metadata.get("cmd_line_args", []).append(vars(args))
+
+    # TODO find out why the commented line gives error after restart:
+    # AttributeError: 'NoneType' object has no attribute 'append'
+    meta_args_data = meta_writer.metadata.get("cmd_line_args", [])
+    meta_args_data.append(vars(args))
+    meta_writer.metadata["cmd_line_args"] = meta_args_data
+    # meta_writer.metadata["cmd_line_args"] \
+    #    = meta_writer.metadata.get("cmd_line_args", []).append(vars(args))
 
     # create ModelCheckpoint to save weights every epoch
     checkpoint_template = os.path.join(args.out_directory, "weights.{epoch:05d}.hdf5")
     checkpointer = ModelCheckpoint(checkpoint_template)
 
-    # load precomputed random-shuffle indices or create them
-    # TODO - save each train/val/test indices separately so there's no danger of
-    # changing args.train_val_test when resuming
-    shuffle_file = os.path.join(args.out_directory, "shuffle.npz")
-    if os.path.exists(shuffle_file) and resume:
-        with open(shuffle_file, "r") as f:
-            shuffle_indices = np.load(f)
-        if args.verbose:
-            print("loading previous data shuffling indices")
-    else:
-        # create shuffled indices
-        shuffle_indices = np.random.permutation(n_total_data)
-        with open(shuffle_file, "w") as f:
-            np.save(f, shuffle_indices)
-        if args.verbose:
-            print("created new data shuffling indices")
-    # training indices are the first consecutive set of shuffled indices, val
-    # next, then test gets the remainder
-    train_indices = shuffle_indices[0:n_train_data]
-    val_indices = shuffle_indices[n_train_data:n_train_data + n_val_data]
-    # test_indices = shuffle_indices[n_train_data + n_val_data:]
-
-    symmetries = [BOARD_TRANSFORMATIONS[name] for name in args.symmetries.strip().split(",")]
+    # get train/validation/test indices
+    train_indices, val_indices, test_indices \
+        = get_train_val_test_indices(args, meta_writer, resume, dataset)
 
     # create dataset generators
     train_data_generator = shuffled_hdf5_batch_generator(
@@ -238,18 +349,18 @@ def run_training(cmd_line_args=None):
         dataset["actions"],
         train_indices,
         args.minibatch,
-        symmetries)
+        BOARD_TRANSFORMATIONS)
     val_data_generator = shuffled_hdf5_batch_generator(
         dataset["states"],
         dataset["actions"],
         val_indices,
         args.minibatch,
-        symmetries)
+        BOARD_TRANSFORMATIONS)
 
     sgd = SGD(lr=args.learning_rate, decay=args.decay)
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=["accuracy"])
 
-    samples_per_epoch = args.epoch_length or n_train_data
+    samples_per_epoch = args.epoch_length or len(train_indices)
 
     if args.verbose:
         print("STARTING TRAINING")
@@ -260,7 +371,7 @@ def run_training(cmd_line_args=None):
         nb_epoch=args.epochs,
         callbacks=[checkpointer, meta_writer],
         validation_data=val_data_generator,
-        nb_val_samples=n_val_data)
+        nb_val_samples=len(val_indices))
 
 
 if __name__ == '__main__':
