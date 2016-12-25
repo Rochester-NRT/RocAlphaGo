@@ -21,15 +21,16 @@ class CNNValue(NeuralNetBase):
     @staticmethod
     def create_network(**kwargs):
         """construct a convolutional neural network.
-        Keword Arguments:
-        - input_dim:            depth of features to be processed by first layer (no default)
-        - board:                width of the go board to be processed (default 19)
-        - filters_per_layer:    number of filters used on every layer (default 128)
-        - layers:               number of convolutional steps (default 12)
-        - filter_width_K:       (where K is between 1 and <layers>) width of filter on
-                                layer K (default 3 except 1st layer which defaults to 5).
-                                Must be odd.
+           Keword Arguments:
+           - input_dim:            depth of features to be processed by first layer (no default)
+           - board:                width of the go board to be processed (default 19)
+           - filters_per_layer:    number of filters used on every layer (default 128)
+           - layers:               number of convolutional steps (default 12)
+           - filter_width_K:       (where K is between 1 and <layers>) width of filter on
+                                   layer K (default 3 except 1st layer which defaults to 5).
+                                   Must be odd.
         """
+
         defaults = {
             "board": 19,
             "filters_per_layer": 128,
