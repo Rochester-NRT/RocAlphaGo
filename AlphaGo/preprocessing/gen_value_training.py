@@ -16,9 +16,13 @@ def init_hdf5(out_pth, n_features, bd_size):
             'states',
             dtype=np.uint8,
             shape=(1, n_features, bd_size, bd_size),
-            maxshape=(None, n_features, bd_size, bd_size),  # 'None' dimension allows it to grow arbitrarily
-            exact=False,                                    # allow non-uint8 datasets to be loaded, coerced to uint8
-            chunks=(1024, n_features, bd_size, bd_size),    # approximately 10MB chunks (bigger for more compression, OK because accessed *in order*)
+            maxshape=(None, n_features, bd_size, bd_size),  
+            # 'None' dimension allows it to grow arbitrarily
+            exact=False,                                    
+            # allow non-uint8 datasets to be loaded, coerced to uint8
+            chunks=(1024, n_features, bd_size, bd_size),    
+            # approximately 10MB chunks (bigger for more compression, 
+            # OK because accessed *in order*)
             compression="lzf")
         winners = h5f.require_dataset(
             'winners',
@@ -43,7 +47,8 @@ def play_batch(player_RL, player_SL, batch_size, features):
     * use the supervised-learning policy to play a game against itself up to that number of moves.
     * now go off-policy and pick a totally random move
     * play out the rest of the game with the reinforcement-learning policy
-    * save the state that occurred *right after* the random move, and the end result of the game, as the training pair
+    * save the state that occurred *right after* the random move, 
+    * and the end result of the game, as the training pair
     """
 
     def do_move(states, moves):
@@ -130,7 +135,7 @@ def run(player_RL, player_SL, out_pth, n_training_pairs, batch_size, bd_size, fe
                 h5_winners[next_idx:] = winners
                 next_idx += batch_size
             except Exception as e:
-                warnings.warn("Unknown error occured during batch save to HDF5 file: {}".format(out_pth))
+                warnings.warn("Unknown error occured during batch save to HDF5 file: {}".format(out_pth))  # noqa: E501
                 raise e
         n_pairs += 1
         if n_pairs >= n_training_pairs / batch_size:
