@@ -17,6 +17,7 @@ class TestCNNValue(unittest.TestCase):
 		self.assertTrue(isinstance(copy, CNNValue))
 		os.remove('.tmp.value.json')
 
+        # test shape
 	def test_ouput_shape(self):
 		gs = GameState()
 
