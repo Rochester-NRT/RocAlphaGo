@@ -16,12 +16,12 @@ def init_hdf5(out_pth, n_features, bd_size):
             'states',
             dtype=np.uint8,
             shape=(1, n_features, bd_size, bd_size),
-            maxshape=(None, n_features, bd_size, bd_size),  
+            maxshape=(None, n_features, bd_size, bd_size),
             # 'None' dimension allows it to grow arbitrarily
-            exact=False,                                    
+            exact=False,
             # allow non-uint8 datasets to be loaded, coerced to uint8
-            chunks=(1024, n_features, bd_size, bd_size),    
-            # approximately 10MB chunks (bigger for more compression, 
+            chunks=(1024, n_features, bd_size, bd_size),
+            # approximately 10MB chunks (bigger for more compression,
             # OK because accessed *in order*)
             compression="lzf")
         winners = h5f.require_dataset(
@@ -47,7 +47,7 @@ def play_batch(player_RL, player_SL, batch_size, features):
     * use the supervised-learning policy to play a game against itself up to that number of moves.
     * now go off-policy and pick a totally random move
     * play out the rest of the game with the reinforcement-learning policy
-    * save the state that occurred *right after* the random move, 
+    * save the state that occurred *right after* the random move,
     * and the end result of the game, as the training pair
     """
 
@@ -161,11 +161,11 @@ if __name__ == '__main__':
     parser.add_argument("--load_from_file", help="Path to HDF5 file to continue from."
                         " Default: None", default=None)
     parser.add_argument("--n_training_pairs", help="Number of training pairs to generate. "
-        "(Default: 10)", type=int, default=10)
+                        "(Default: 10)", type=int, default=10)
     parser.add_argument("--batch_size", help="Number of games to run in parallel. "
-        "(Default: 2)", type=int, default=2)
+                        "(Default: 2)", type=int, default=2)
     parser.add_argument("--board_size", help="Board size (int). "
-        "(Default: 19)", type=int, default=19)
+                        "(Default: 19)", type=int, default=19)
     args = parser.parse_args()
 
     # Load architecture and weights from file
