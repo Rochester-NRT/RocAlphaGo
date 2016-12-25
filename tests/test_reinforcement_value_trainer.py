@@ -6,24 +6,24 @@ import os
 
 class TestCNNValue(unittest.TestCase):
 
-	def setUp(self):
-		self.value = CNNValue(['board', 'ones', 'turns_since'])
+    def setUp(self):
+        self.value = CNNValue(['board', 'ones', 'turns_since'])
 
-	def test_save_load(self):
-		self.value.save_model('.tmp.value.json')
-		copy = CNNValue.load_model('.tmp.value.json')
+    def test_save_load(self):
+        self.value.save_model('.tmp.value.json')
+        copy = CNNValue.load_model('.tmp.value.json')
 
-		# test that loaded class is also an instance of CNNValue
-		self.assertTrue(isinstance(copy, CNNValue))
-		os.remove('.tmp.value.json')
+        # test that loaded class is also an instance of CNNValue
+        self.assertTrue(isinstance(copy, CNNValue))
+        os.remove('.tmp.value.json')
 
-        # test shape
-	def test_ouput_shape(self):
-		gs = GameState()
+    # test shape
+    def test_ouput_shape(self):
+        gs = GameState()
 
-		val = self.value.eval_state(gs)
-		self.assertEqual(len(val), 1)
+        val = self.value.eval_state(gs)
+        self.assertEqual(len(val), 1)
 
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()
