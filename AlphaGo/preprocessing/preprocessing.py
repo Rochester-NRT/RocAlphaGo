@@ -254,6 +254,11 @@ FEATURES = {
     "legal": {
         "size": 1,
         "function": get_legal
+    },
+    "color": {
+	"size": 1,
+	"function": lambda state: np.ones((1, state.size, state.size)) *
+	(state.current_player == go.BLACK)
     }
 }
 
