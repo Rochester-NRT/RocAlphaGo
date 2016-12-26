@@ -8,7 +8,7 @@ from keras.callbacks import Callback
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
 
-# TODO verify with value training data, 
+# TODO verify with value training data,
 # unused functions? missing functionality?
 
 # default settings
@@ -717,7 +717,7 @@ def handle_arguments(cmd_line_args=None):
     """
 
     import argparse
-    parser = argparse.ArgumentParser(description='Perform reinforcement training on a value network.')
+    parser = argparse.ArgumentParser(description='Perform reinforcement training on a value network.')  # noqa: E501
     # subparser is always first argument
     subparsers = parser.add_subparsers(help='sub-command help')
 
