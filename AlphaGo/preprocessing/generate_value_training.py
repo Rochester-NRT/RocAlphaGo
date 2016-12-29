@@ -165,7 +165,7 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
                 warnings.warn("Unknown error occured during batch save to HDF5 file: {}".format(hdf5_file))  # noqa: E501
                 raise e
 
-        if verbose and next_idx % (batch_size * 10000):
+        if verbose and ((next_idx % (batch_size * 10000)) == 0):
             print("Generated " + str(next_idx) + " training pairs")
 
         # stop data generation when at least n_trainings_pairs have been created
