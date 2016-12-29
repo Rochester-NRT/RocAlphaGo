@@ -1,7 +1,10 @@
 from AlphaGo.ai import ProbabilisticPolicyPlayer
 from AlphaGo.go import GameState
+from AlphaGo.go import BLACK
+from AlphaGo.go import WHITE
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
+from AlphaGo.util import save_gamestate_to_sgf 
 import h5py
 import numpy as np
 import os
@@ -16,6 +19,9 @@ DEFAULT_TEMPERATURE_RL = 0.1
 DEFAULT_BATCH_SIZE = 2
 DEAULT_RANDOM_MOVE = 450
 DEFAULT_FILE_NAME = "value_planes.hdf5"
+
+WIN = 1
+LOSE = 0
 
 
 def init_hdf5(h5f, n_features, bd_size):
@@ -45,7 +51,7 @@ def init_hdf5(h5f, n_features, bd_size):
     return states, winners
 
 
-def play_batch(player_RL, player_SL, batch_size, features, i_rand_move):
+def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx, sgf_path):
     """Play a batch of games in parallel and return one training pair from each game.
 
     As described in Silver et al, the method for generating value net training data is as follows:
@@ -67,11 +73,12 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move):
 
     def do_rand_move(states):
         """Do a uniform-random move over legal moves and record info for
-        training. Only gets called once per game.
+           training. Only gets called once per game.
         """
 
         # Record player color
-        colors = [st.current_player for st in states]
+        for st in states:
+            color = st.current_player
 
         # get legal moves and play one at random
         legal_moves = [st.get_legal_moves() for st in states]
@@ -80,41 +87,38 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move):
 
         # copy all states, these are the generated training data
         training_state_list = [st.copy() for st in states]  # For later 1hot preprocessing
-        return training_state_list, colors, states
+        return training_state_list, color, states
 
     def convert(state_list, preprocessor):
         """Convert states to 1-hot and concatenate. X's are game state objects.
         """
+
         states = np.concatenate(
             [preprocessor.state_to_tensor(state) for state in state_list], axis=0)
         return states
 
     # Lists of game training pairs (1-hot)
     preprocessor = Preprocess(features)
-    player = player_SL
     states = [GameState() for _ in xrange(batch_size)]
 
-    # Randomly choose turn to play uniform random. Move prior will be from SL
-    # policy. Moves after will be from RL policy.
-
-    for _ in xrange(i_rand_move):
+    # play player_SL moves
+    for _ in xrange(i_rand_move - 1):
         # Get moves (batch)
-        batch_moves = player.get_moves(states)
+        batch_moves = player_SL.get_moves(states)
         # Do moves (black)
         states = do_move(states, batch_moves)
 
     # Make random move
-    states_list, colors, states = do_rand_move(states)
-
-    # switch to player_RL policy
-    player = player_RL
+    # color is random move player color
+    states_list, color, states = do_rand_move(states)
 
     # TODO check that random move is played before game is finished?
-    # remove state if so?
+    # TODO remove game if so?
 
+    # play moves with player_RL till game ends
     while True:
         # Get moves (batch)
-        batch_moves = player.get_moves(states)
+        batch_moves = player_RL.get_moves(states)
         # Do moves (black)
         states = do_move(states, batch_moves)
 
@@ -124,15 +128,41 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move):
         if all(done):
             break
 
+    if sgf_path is not None:
+        for gm in states:
+            # add leading '0'
+            file_name = str(next_idx)
+            while len(file_name) < 10:
+                file_name = '0' + file_name
+
+            # determine winner
+            winner_game = 'WHITE' if gm.get_winner() == WHITE else 'BLACK'
+            random_player = 'WHITE' if color == WHITE else 'BLACK'
+
+            # generate file name
+            file_name += '_winner_' + winner_game + '_active-player_' + \
+                         random_player + '_move_' + str(i_rand_move) + '.sgf'
+            # save sgf
+            save_gamestate_to_sgf(gm, sgf_path, file_name,
+                                  result=winner_game + ' ' + str(i_rand_move))
+
     # Concatenate training examples
     training_states = convert(states_list, preprocessor)
+
     # get winners list
-    winners = np.array([st.get_winner() for st in states]).reshape(batch_size, 1)
+    # TODO should range be 0/1 or -1/1 for LOSE/WIN
+    # set winner relative to random move player color (color)
+    # winner BLACK & color Black -> WIN
+    # winner WHITE & color WHITE -> WIN
+    # winner BLACK & color WHITE -> LOSE
+    # winner WHITE & color Black -> LOSE
+    winners = np.array([WIN if st.get_winner() == color else 
+                        LOSE for st in states]).reshape(batch_size, 1)
     return training_states, winners
 
 
 def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
-                  batch_size, bd_size, features, verbose):
+                  batch_size, bd_size, features, verbose, sgf_path):
     # used features
     n_features = Preprocess(features).output_dim
     # temporary hdf5 file
@@ -151,8 +181,13 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
 
     next_idx = 0
     while True:
+        # Randomly choose turn to play uniform random. Move prior will be from SL
+        # policy. Moves after will be from RL policy.
         i_rand_move = np.random.choice(range(DEAULT_RANDOM_MOVE))
-        states, winners = play_batch(player_RL, player_SL, batch_size, features, i_rand_move)
+
+        # play games
+        states, winners = play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx, sgf_path)
+
         if states is not None:
             try:
                 # get actual batch size in case any pair was removed
@@ -173,7 +208,7 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
                 raise e
 
         if verbose:
-            # primitive progress bar
+            # primitive progress indication
             current = str(next_idx)
             while len(current) < len(max_value):
                 current = ' ' + current
@@ -221,6 +256,7 @@ def handle_arguments(cmd_line_args=None):
     # optional arguments
     parser.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")  # noqa: E501
     parser.add_argument("--outfile", "-o", help="Destination to write data (hdf5 file) Default: " + DEFAULT_FILE_NAME, default=DEFAULT_FILE_NAME)  # noqa: E501
+    parser.add_argument("--sgf-path", help="If set all sgf will be saved here. Default: None", default=None)  # noqa: E501
     parser.add_argument("--n-training-pairs", help="Number of training pairs to generate. Default: " + str(DEFAULT_N_TRAINING_PAIRS), type=int, default=DEFAULT_N_TRAINING_PAIRS)  # noqa: E501
     parser.add_argument("--batch-size", help="Number of games to run in parallel. Default: " + str(DEFAULT_BATCH_SIZE), type=int, default=DEFAULT_BATCH_SIZE)  # noqa: E501
     parser.add_argument("--features", "-f", help="Comma-separated list of features to compute and store or 'all'. Default: all", default='all')  # noqa: E501
@@ -269,10 +305,13 @@ def handle_arguments(cmd_line_args=None):
     player_RL = ProbabilisticPolicyPlayer(policy_RL, temperature=args.rl_temperature,
                                           move_limit=DEFAULT_MAX_GAME_DEPTH)
 
-    # TODO load board size from model
+    # check if folder exists
+    if args.sgf_path is not None and not os.path.exists(args.sgf_path):
+        os.makedirs(args.sgf_path)
+
     # generate data
-    generate_data(player_RL, player_SL, args.outfile, args.n_training_pairs,
-                  args.batch_size, 19, features, args.verbose)
+    generate_data(player_RL, player_SL, args.outfile, args.n_training_pairs, args.batch_size,
+                  policy_SL.model.input_shape[2], features, args.verbose, args.sgf_path)
 
 
 if __name__ == '__main__':
