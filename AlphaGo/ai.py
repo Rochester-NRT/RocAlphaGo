@@ -211,7 +211,7 @@ class ProbabilisticValuePlayer(object):
 
             # numpy interprets a list of tuples as 2D, so we must choose an
             # _index_ of moves then apply it in 2 steps
-            choice_idx = np.random.choice(len(moves), p=probabilities)
+            choice_idx = np.random.choice(len(legal_moves), p=probabilities)
             return legal_moves[choice_idx]
 
         # No 'sensible' moves available, so do pass move
