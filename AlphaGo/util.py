@@ -64,7 +64,7 @@ def sgf_to_gamestate(sgf_string):
 
 
 def save_gamestate_to_sgf(gamestate, path, filename, black_player_name='Unknown',
-                          white_player_name='Unknown', size=19, komi=7.5):
+                          white_player_name='Unknown', size=19, komi=7.5, result=None):
     """Creates a simplified sgf for viewing playouts or positions
     """
     str_list = []
@@ -74,6 +74,9 @@ def save_gamestate_to_sgf(gamestate, path, filename, black_player_name='Unknown'
     str_list.append('KM[{}]'.format(komi))
     str_list.append('PB[{}]'.format(black_player_name))
     str_list.append('PW[{}]'.format(white_player_name))
+    if result is not None:
+        str_list.append('RE[{}]'.format(result))
+
     cycle_string = 'BW'
     # Handle handicaps
     if len(gamestate.handicaps) > 0:
