@@ -1,10 +1,9 @@
 from AlphaGo.ai import ProbabilisticPolicyPlayer
 from AlphaGo.go import GameState
-from AlphaGo.go import BLACK
 from AlphaGo.go import WHITE
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
-from AlphaGo.util import save_gamestate_to_sgf 
+from AlphaGo.util import save_gamestate_to_sgf
 import h5py
 import numpy as np
 import os
@@ -156,7 +155,7 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
     # winner WHITE & color WHITE -> WIN
     # winner BLACK & color WHITE -> LOSE
     # winner WHITE & color Black -> LOSE
-    winners = np.array([WIN if st.get_winner() == color else 
+    winners = np.array([WIN if st.get_winner() == color else
                         LOSE for st in states]).reshape(batch_size, 1)
     return training_states, winners
 
@@ -186,7 +185,8 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
         i_rand_move = np.random.choice(range(DEAULT_RANDOM_MOVE))
 
         # play games
-        states, winners = play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx, sgf_path)
+        states, winners = play_batch(player_RL, player_SL, batch_size, features,
+                                     i_rand_move, next_idx, sgf_path)
 
         if states is not None:
             try:
