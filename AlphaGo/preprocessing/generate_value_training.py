@@ -15,6 +15,7 @@ DEFAULT_TEMPERATURE_RL = 0.1
 DEFAULT_BATCH_SIZE = 2
 DEFAULT_FILE_NAME = "value_planes.hdf5"
 
+
 def init_hdf5(h5f, n_features, bd_size):
     try:
         states = h5f.require_dataset(
@@ -38,7 +39,6 @@ def init_hdf5(h5f, n_features, bd_size):
             chunks=(1024, 1),
             compression="lzf")
     except Exception as e:
-        os.remove(tmp_file)
         raise e
     return states, winners
 
@@ -70,12 +70,12 @@ def play_batch(player_RL, player_SL, batch_size, features):
 
         # Record player color
         colors = [st.current_player for st in states]
-        
+
         # get legal moves and play one at random
         legal_moves = [st.get_legal_moves() for st in states]
         rand_moves = [lm[np.random.choice(len(lm))] for lm in legal_moves]
         states = do_move(states, rand_moves)
-        
+
         # copy all states, these are the generated training data
         training_state_list = [st.copy() for st in states]  # For later 1hot preprocessing
         return training_state_list, colors, states
@@ -93,9 +93,9 @@ def play_batch(player_RL, player_SL, batch_size, features):
     states = [GameState() for _ in xrange(batch_size)]
 
     # Randomly choose turn to play uniform random. Move prior will be from SL
-    # policy. Moves after will be from RL policy.    
+    # policy. Moves after will be from RL policy.
     i_rand_move = np.random.choice(range(449))
-    print("Random move: " + str(i_rand_move)) 
+    print("Random move: " + str(i_rand_move))
 
     for _ in xrange(i_rand_move):
         # Get moves (batch)
@@ -108,7 +108,7 @@ def play_batch(player_RL, player_SL, batch_size, features):
 
     # switch to player_RL policy
     player = player_RL
-    
+
     # TODO check that random move is played before game is finished?
     # remove state if so?
 
@@ -120,7 +120,7 @@ def play_batch(player_RL, player_SL, batch_size, features):
 
         # check if all games are finished
         done = [st.is_end_of_game for st in states]
-        
+
         if all(done):
             break
 
@@ -141,7 +141,7 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
     h5f = h5py.File(tmp_file, 'w')
     # initialize a new hdf5 file
     h5_states, h5_winners = init_hdf5(h5f, n_features, bd_size)
-    
+
     if verbose:
         print(str(hdf5_file) + " file initialized.")
 
@@ -152,13 +152,13 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
             try:
                 # get actual batch size in case any pair was removed
                 actual_batch_size = len(states)
-                
+
                 # add states and winners to hdf5 file
                 h5_states.resize((next_idx + actual_batch_size, n_features, bd_size, bd_size))
                 h5_winners.resize((next_idx + actual_batch_size, 1))
                 h5_states[next_idx:] = states
                 h5_winners[next_idx:] = winners
-                
+
                 # count saved pairs
                 next_idx += actual_batch_size
             except Exception as e:
@@ -237,14 +237,14 @@ def handle_arguments(cmd_line_args=None):
     policy_SL = CNNPolicy.load_model(args.model_path)
     policy_SL.model.load_weights(args.SL_weights_path)
     # create SL player
-    player_SL = ProbabilisticPolicyPlayer(policy_SL, temperature=args.sl_temperature, 
+    player_SL = ProbabilisticPolicyPlayer(policy_SL, temperature=args.sl_temperature,
                                           move_limit=DEFAULT_MAX_GAME_DEPTH)
 
     # Load RL architecture and weights from file
     policy_RL = CNNPolicy.load_model(args.model_path)
     policy_RL.model.load_weights(args.RL_weights_path)
     # Create RL player
-    player_RL = ProbabilisticPolicyPlayer(policy_RL, temperature=args.rl_temperature, 
+    player_RL = ProbabilisticPolicyPlayer(policy_RL, temperature=args.rl_temperature,
                                           move_limit=DEFAULT_MAX_GAME_DEPTH)
 
     # TODO load board size from model
