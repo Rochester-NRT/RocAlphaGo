@@ -5,6 +5,7 @@ from AlphaGo.preprocessing.preprocessing import Preprocess
 import h5py
 import numpy as np
 import os
+import sys
 import warnings
 
 # default settings
@@ -13,6 +14,7 @@ DEFAULT_MAX_GAME_DEPTH = 500
 DEFAULT_TEMPERATURE_SL = 0.67
 DEFAULT_TEMPERATURE_RL = 0.1
 DEFAULT_BATCH_SIZE = 2
+DEAULT_RANDOM_MOVE = 450
 DEFAULT_FILE_NAME = "value_planes.hdf5"
 
 
@@ -43,7 +45,7 @@ def init_hdf5(h5f, n_features, bd_size):
     return states, winners
 
 
-def play_batch(player_RL, player_SL, batch_size, features):
+def play_batch(player_RL, player_SL, batch_size, features, i_rand_move):
     """Play a batch of games in parallel and return one training pair from each game.
 
     As described in Silver et al, the method for generating value net training data is as follows:
@@ -94,8 +96,6 @@ def play_batch(player_RL, player_SL, batch_size, features):
 
     # Randomly choose turn to play uniform random. Move prior will be from SL
     # policy. Moves after will be from RL policy.
-    i_rand_move = np.random.choice(range(449))
-    print("Random move: " + str(i_rand_move))
 
     for _ in xrange(i_rand_move):
         # Get moves (batch)
@@ -142,16 +142,23 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
     # initialize a new hdf5 file
     h5_states, h5_winners = init_hdf5(h5f, n_features, bd_size)
 
+    # random move distribution
+    distribution = {key: 0 for key in range(DEAULT_RANDOM_MOVE)}
+
     if verbose:
         print(str(hdf5_file) + " file initialized.")
+        max_value = str(n_training_pairs)
 
     next_idx = 0
     while True:
-        states, winners = play_batch(player_RL, player_SL, batch_size, features)
+        i_rand_move = np.random.choice(range(DEAULT_RANDOM_MOVE))
+        states, winners = play_batch(player_RL, player_SL, batch_size, features, i_rand_move)
         if states is not None:
             try:
                 # get actual batch size in case any pair was removed
                 actual_batch_size = len(states)
+                # increment random distribution
+                distribution[i_rand_move] += actual_batch_size
 
                 # add states and winners to hdf5 file
                 h5_states.resize((next_idx + actual_batch_size, n_features, bd_size, bd_size))
@@ -165,11 +172,21 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
                 warnings.warn("Unknown error occured during batch save to HDF5 file: {}".format(hdf5_file))  # noqa: E501
                 raise e
 
-        if verbose and ((next_idx % (batch_size * 10000)) == 0):
-            print("Generated " + str(next_idx) + " training pairs")
+        if verbose:
+            # primitive progress bar
+            current = str(next_idx)
+            while len(current) < len(max_value):
+                current = ' ' + current
+
+            line = 'Progress: ' + current + '/' + max_value
+
+            sys.stdout.write('\b' * len(line))
+            sys.stdout.write('\r')
+            sys.stdout.write(line)
+            sys.stdout.flush()
 
         # stop data generation when at least n_trainings_pairs have been created
-        if n_training_pairs >= next_idx:
+        if n_training_pairs <= next_idx:
             break
 
     # processing complete: rename tmp_file to hdf5_file
@@ -177,6 +194,11 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
     os.rename(tmp_file, hdf5_file)
     if verbose:
         print("Value training data succesfull created.")
+
+        # show random move distribution
+        print("\nRandom move distribution:")
+        for key in range(DEAULT_RANDOM_MOVE):
+            print("Random move: " + str(key) + " " + str(distribution[key]))
 
 
 def handle_arguments(cmd_line_args=None):
@@ -199,8 +221,8 @@ def handle_arguments(cmd_line_args=None):
     # optional arguments
     parser.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")  # noqa: E501
     parser.add_argument("--outfile", "-o", help="Destination to write data (hdf5 file) Default: " + DEFAULT_FILE_NAME, default=DEFAULT_FILE_NAME)  # noqa: E501
-    parser.add_argument("--n_training_pairs", help="Number of training pairs to generate. Default: " + str(DEFAULT_N_TRAINING_PAIRS), type=int, default=DEFAULT_N_TRAINING_PAIRS)  # noqa: E501
-    parser.add_argument("--batch_size", help="Number of games to run in parallel. Default: " + str(DEFAULT_BATCH_SIZE), type=int, default=DEFAULT_BATCH_SIZE)  # noqa: E501
+    parser.add_argument("--n-training-pairs", help="Number of training pairs to generate. Default: " + str(DEFAULT_N_TRAINING_PAIRS), type=int, default=DEFAULT_N_TRAINING_PAIRS)  # noqa: E501
+    parser.add_argument("--batch-size", help="Number of games to run in parallel. Default: " + str(DEFAULT_BATCH_SIZE), type=int, default=DEFAULT_BATCH_SIZE)  # noqa: E501
     parser.add_argument("--features", "-f", help="Comma-separated list of features to compute and store or 'all'. Default: all", default='all')  # noqa: E501
     parser.add_argument("--sl-temperature", help="Distribution temperature of players using SL policies. Default: " + str(DEFAULT_TEMPERATURE_SL), type=float, default=DEFAULT_TEMPERATURE_SL)  # noqa: E501
     parser.add_argument("--rl-temperature", help="Distribution temperature of players using RL policies. Default: " + str(DEFAULT_TEMPERATURE_RL), type=float, default=DEFAULT_TEMPERATURE_RL)  # noqa: E501
