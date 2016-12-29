@@ -7,7 +7,7 @@ from AlphaGo import mcts
 
 class GreedyPolicyPlayer(object):
     """A player that uses a greedy policy (i.e. chooses the highest probability
-    move each turn)
+       move each turn)
     """
 
     def __init__(self, policy_function, pass_when_offered=False, move_limit=None):
@@ -16,14 +16,62 @@ class GreedyPolicyPlayer(object):
         self.move_limit = move_limit
 
     def get_move(self, state):
+        # check move limit
         if self.move_limit is not None and len(state.history) > self.move_limit:
             return go.PASS_MOVE
+
+        # check if pass was offered and we want to pass
         if self.pass_when_offered:
             if len(state.history) > 100 and state.history[-1] == go.PASS_MOVE:
                 return go.PASS_MOVE
+
+        # list with sensible moves
         sensible_moves = [move for move in state.get_legal_moves(include_eyes=False)]
+
+        # check if there are sensible moves left to do
         if len(sensible_moves) > 0:
             move_probs = self.policy.eval_state(state, sensible_moves)
+            max_prob = max(move_probs, key=itemgetter(1))
+            return max_prob[0]
+        # No 'sensible' moves available, so do pass move
+        return go.PASS_MOVE
+
+
+class GreedyValuePlayer(object):
+    """A player that uses a greedy value (i.e. chooses the highest probability
+       move each turn)
+    """
+
+    def __init__(self, value_function, pass_when_offered=False, move_limit=None):
+        self.value = value_function
+        self.pass_when_offered = pass_when_offered
+        self.move_limit = move_limit
+
+    def get_move(self, state):
+        # check move limit
+        if self.move_limit is not None and len(state.history) > self.move_limit:
+            return go.PASS_MOVE
+
+        # check if pass was offered and we want to pass
+        if self.pass_when_offered:
+            if len(state.history) > 100 and state.history[-1] == go.PASS_MOVE:
+                return go.PASS_MOVE
+
+        # list with 'sensible' moves
+        sensible_moves = [move for move in state.get_legal_moves(include_eyes=False)]
+
+        # check if there are 'sensible' moves left to do
+        if len(sensible_moves) > 0:
+            # list with legal moves
+            legal_moves = state.get_legal_moves()
+            # generate all possible next states
+            next_state_list = [state.copy().do_move(move) for move in legal_moves]
+            # evaluate all possble states
+            evaluate_list = [self.value.eval_state(next_state) for next_state in next_state_list]
+            # combine legal_moves and evaluate_list
+            move_probs = zip(legal_moves, evaluate_list)
+
+            # get move with highest win chance
             max_prob = max(move_probs, key=itemgetter(1))
             return max_prob[0]
         # No 'sensible' moves available, so do pass move
