@@ -1,6 +1,7 @@
 from AlphaGo.ai import ProbabilisticPolicyPlayer
 from AlphaGo.go import GameState
 from AlphaGo.go import WHITE
+from AlphaGo.go import BLACK
 from AlphaGo.models.policy import CNNPolicy
 from AlphaGo.preprocessing.preprocessing import Preprocess
 from AlphaGo.util import save_gamestate_to_sgf
@@ -13,15 +14,15 @@ import warnings
 # default settings
 DEFAULT_N_TRAINING_PAIRS = 30000000
 DEFAULT_MAX_GAME_DEPTH = 500
-DEFAULT_TEMPERATURE_SL = 0.67
-DEFAULT_TEMPERATURE_RL = 0.1
+DEFAULT_TEMPERATURE_SL = 1.3
+DEFAULT_TEMPERATURE_RL = 0.67
 DEFAULT_BATCH_SIZE = 2
 DEAULT_RANDOM_MOVE = 450
 DEFAULT_FILE_NAME = "value_planes.hdf5"
 
 # output values for win and lose
 WIN = 1
-LOSE = 0
+LOSE = -1
 
 
 def init_hdf5(h5f, n_features, bd_size):
@@ -76,10 +77,6 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
            training. Only gets called once per game.
         """
 
-        # Record player color
-        for st in states:
-            color = st.current_player
-
         # get legal moves and play one at random
         legal_moves = [st.get_legal_moves() for st in states]
         rand_moves = [lm[np.random.choice(len(lm))] for lm in legal_moves]
@@ -87,7 +84,7 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
 
         # copy all states, these are the generated training data
         training_state_list = [st.copy() for st in states]  # For later 1hot preprocessing
-        return training_state_list, color, states
+        return training_state_list, states
 
     def convert(state_list, preprocessor):
         """Convert states to 1-hot and concatenate. X's are game state objects.
@@ -109,8 +106,10 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
         states = do_move(states, batch_moves)
 
     # Make random move
+    states_list, states = do_rand_move(states)
+
     # color is random move player color
-    states_list, color, states = do_rand_move(states)
+    color = WHITE if i_rand_move % 2 == 0 else BLACK
 
     # TODO check that random move is played before game is finished?
     # TODO remove game if so?

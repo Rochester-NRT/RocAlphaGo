@@ -5,11 +5,9 @@ import json
 from keras import backend as K
 from keras.optimizers import SGD
 from keras.callbacks import Callback
-from AlphaGo.models.policy import CNNPolicy
+from AlphaGo.models.value import CNNValue
 from AlphaGo.preprocessing.preprocessing import Preprocess
-
-# TODO verify with value training data,
-# unused functions? missing functionality?
+from AlphaGo.util import confirm
 
 # default settings
 DEFAULT_MAX_VALIDATION = 1000000000
@@ -19,8 +17,15 @@ DEFAULT_BATCH_SIZE = 32
 DEFAULT_DECAY = .0001
 DEFAULT_EPOCH = 10
 
+# metdata file
 FILE_METADATA = 'metadata_value_reinforce.json'
-FOLDER_WEIGHT = 'value_weights/'
+# weight folder
+FOLDER_WEIGHT = os.path.join('value_reinforce_weights')
+
+# shuffle files
+FILE_VALIDATE = 'shuffle_value_validate.npz'
+FILE_TRAIN = 'shuffle_value_train.npz'
+FILE_TEST = 'shuffle_value_test.npz'
 
 TRANSFORMATION_INDICES = {
     "noop": 0,
@@ -73,43 +78,13 @@ def shuffled_hdf5_batch_generator(state_dataset, action_dataset,
                 yield (Xbatch, Ybatch)
 
 
-def confirm(prompt=None, resp=False):
-    """prompts for yes or no response from the user. Returns True for yes and
-       False for no.
-       'resp' should be set to the default value assumed by the caller when
-       user simply types ENTER.
-       created by:
-       http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
-    """
-
-    if prompt is None:
-        prompt = 'Confirm'
-
-    if resp:
-        prompt = '%s [%s]|%s: ' % (prompt, 'y', 'n')
-    else:
-        prompt = '%s [%s]|%s: ' % (prompt, 'n', 'y')
-
-    while True:
-        ans = raw_input(prompt)
-        if not ans:
-            return resp
-        if ans not in ['y', 'Y', 'n', 'N']:
-            print 'please enter y or n.'
-            continue
-        if ans == 'y' or ans == 'Y':
-            return True
-        if ans == 'n' or ans == 'N':
-            return False
-
-
 class LrDecayCallback(Callback):
     """Set learning rate every batch according to:
        initial_learning_rate * (1. / (1. + self.decay * curent_batch))
     """
 
     def __init__(self, learning_rate, decay):
-        super(Callback, self).__init__()
+        super(LrDecayCallback, self).__init__()
         self.learning_rate = learning_rate
         self.decay = decay
 
@@ -119,7 +94,7 @@ class LrDecayCallback(Callback):
         new_lr = self.learning_rate * (1. / (1. + self.decay * batch))
 
         # set new learning rate
-        self.model.optimizer.lr = K.variable(value=new_lr)
+        K.set_value(self.model.optimizer.lr, new_lr)
 
     def on_train_begin(self, logs={}):
         # set initial learning rate
@@ -143,7 +118,7 @@ class LrStepDecayCallback(Callback):
     """
 
     def __init__(self, learning_rate, decay_every, decay, verbose):
-        super(Callback, self).__init__()
+        super(LrStepDecayCallback, self).__init__()
         self.learning_rate = learning_rate
         self.decay_every = decay_every
         self.verbose = verbose
@@ -155,7 +130,7 @@ class LrStepDecayCallback(Callback):
         new_lr = self.learning_rate * (self.decay ** n_decay)
 
         # set new learning rate
-        self.model.optimizer.lr = K.variable(value=new_lr)
+        K.set_value(self.model.optimizer.lr, new_lr)
 
         # print new learning rate if verbose
         if self.verbose:
@@ -181,13 +156,13 @@ class LrStepDecayCallback(Callback):
         self.model.optimizer.current_batch += 1
 
 
-class MetadataWriterCallback(Callback):
+class EpochDataSaverCallback(Callback):
     """Set current batch at training start
        Save metadata and Model after every epoch
     """
 
     def __init__(self, path, root, metadata):
-        super(Callback, self).__init__()
+        super(EpochDataSaverCallback, self).__init__()
         self.file = path
         self.root = root
         self.metadata = metadata
@@ -339,9 +314,9 @@ def load_train_val_test_indices(verbose, arg_symmetries, dataset_length, batch_s
        Return train/val/test set
     """
     # shuffle file locations for train/validation/test set
-    shuffle_file_train = os.path.join(directory, "shuffle_train.npz")
-    shuffle_file_val = os.path.join(directory, "shuffle_validate.npz")
-    shuffle_file_test = os.path.join(directory, "shuffle_test.npz")
+    shuffle_file_train = os.path.join(directory, FILE_TRAIN)
+    shuffle_file_val = os.path.join(directory, FILE_VALIDATE)
+    shuffle_file_test = os.path.join(directory, FILE_TEST)
 
     # load from .npz files
     train_indices = load_indices_from_file(shuffle_file_train)
@@ -395,9 +370,9 @@ def set_training_settings(resume, args, metadata, dataset_length):
     """
 
     # shuffle file locations for train/validation/test set
-    shuffle_file_train = os.path.join(args.out_directory, "shuffle_train.npz")
-    shuffle_file_val = os.path.join(args.out_directory, "shuffle_validate.npz")
-    shuffle_file_test = os.path.join(args.out_directory, "shuffle_test.npz")
+    shuffle_file_train = os.path.join(args.out_directory, FILE_TRAIN)
+    shuffle_file_val = os.path.join(args.out_directory, FILE_VALIDATE)
+    shuffle_file_test = os.path.join(args.out_directory, FILE_TEST)
 
     # determine if new shuffle files have to be created
     save_new_shuffle_indices = not resume
@@ -554,7 +529,7 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
     resume = weight_file is not None
 
     # load model from json spec
-    policy = CNNPolicy.load_model(metadata["model_file"])
+    policy = CNNValue.load_model(metadata["model_file"])
     model_features = policy.preprocessor.feature_list
     model = policy.model
     # load weights
@@ -571,7 +546,7 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
     # and saves model  at the same time
     # the MetadataWriterCallback only sets 'epoch', 'best_epoch' and 'current_batch'.
     # We can add in anything else we like here
-    meta_writer = MetadataWriterCallback(meta_file, out_directory, metadata)
+    meta_writer = EpochDataSaverCallback(meta_file, out_directory, metadata)
 
     # get train/validation/test indices
     train_indices, val_indices, test_indices \
@@ -581,12 +556,12 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
     # create dataset generators
     train_data_generator = shuffled_hdf5_batch_generator(
         dataset["states"],
-        dataset["actions"],
+        dataset["winners"],
         train_indices,
         metadata["batch_size"])
     val_data_generator = shuffled_hdf5_batch_generator(
         dataset["states"],
-        dataset["actions"],
+        dataset["winners"],
         val_indices,
         metadata["batch_size"])
 
@@ -725,7 +700,7 @@ def handle_arguments(cmd_line_args=None):
     train = subparsers.add_parser('train', help='Start or resume reinforcement training on a value network.')  # noqa: E501
     # required arguments
     train.add_argument("out_directory", help="directory where metadata and weights will be saved")  # noqa: E501
-    train.add_argument("model", help="Path to a JSON model file (i.e. from CNNPolicy.save_model())")  # noqa: E501
+    train.add_argument("model", help="Path to a JSON model file (i.e. from CNNValue.save_model())")  # noqa: E501
     train.add_argument("train_data", help="A .h5 file of training data")
     # frequently used args
     train.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")  # noqa: E501
