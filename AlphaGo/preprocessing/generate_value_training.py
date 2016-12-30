@@ -19,6 +19,7 @@ DEFAULT_BATCH_SIZE = 2
 DEAULT_RANDOM_MOVE = 450
 DEFAULT_FILE_NAME = "value_planes.hdf5"
 
+# output values for win and lose
 WIN = 1
 LOSE = 0
 
@@ -128,9 +129,12 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
             break
 
     if sgf_path is not None:
+        # number different sgf
+        sgf_id = next_idx
+
         for gm in states:
             # add leading '0'
-            file_name = str(next_idx)
+            file_name = str(sgf_id)
             while len(file_name) < 10:
                 file_name = '0' + file_name
 
@@ -144,13 +148,15 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
             # save sgf
             save_gamestate_to_sgf(gm, sgf_path, file_name,
                                   result=winner_game + ' ' + str(i_rand_move))
+            # increment sgf id count
+            sgf_id += 1
 
     # Concatenate training examples
     training_states = convert(states_list, preprocessor)
 
     # get winners list
     # TODO should range be 0/1 or -1/1 for LOSE/WIN
-    # set winner relative to random move player color (color)
+    # get winner relative to 'random move' player color (color)
     # winner BLACK & color Black -> WIN
     # winner WHITE & color WHITE -> WIN
     # winner BLACK & color WHITE -> LOSE
