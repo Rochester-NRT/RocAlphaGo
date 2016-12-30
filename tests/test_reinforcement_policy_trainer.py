@@ -69,7 +69,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
 
     def testTrain(self):
         model = os.path.join('tests', 'test_data', 'minimodel_policy.json')
-        init_weights = os.path.join('tests', 'test_data', 'hdf5', 'random_minimodel_policy_weights.hdf5')
+        init_weights = os.path.join('tests', 'test_data', 'hdf5',
+                                    'random_minimodel_policy_weights.hdf5')
         output = os.path.join('tests', 'test_data', '.tmp.rl.training/')
         args = [model, init_weights, output, '--game-batch', '1', '--iterations', '1']
         run_training(args)
@@ -85,8 +86,10 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             # Create "mock" states that end after 2 moves with a predetermined winner.
             states = [MockState(winner, 2, size=19) for winner in winners]
 
-            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
-            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
+            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
+            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
             policy1.model.set_weights(init_weights)
             optimizer = SGD(lr=0.001)
             policy1.model.compile(loss=log_loss, optimizer=optimizer)
@@ -100,7 +103,8 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
             return policy1.model.get_weights()
 
         def test_game_gradient(game):
-            policy = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
+            policy = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                       'minimodel_policy.json'))
             initial_parameters = policy.model.get_weights()
             # Cases 1 and 2 have identical starting models and identical (state, action) pairs,
             # but they differ in who won the games.
@@ -127,8 +131,10 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
 
     def testRunNGamesUpdatesWeights(self):
         def test_game_run_N(game):
-            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
-            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
+            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
+            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
             learner = MockPlayer(policy1, game)
             opponent = MockPlayer(policy2, game)
             optimizer = SGD()
@@ -153,8 +159,10 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
         def test_game_increase(game):
             # Create "mock" state that ends after 20 moves with the learner winnning
             win_state = [MockState(go.BLACK, 20, size=19)]
-            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
-            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
+            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
+            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
             learner = MockPlayer(policy1, game)
             opponent = MockPlayer(policy2, game)
             optimizer = SGD()
@@ -181,8 +189,10 @@ class TestReinforcementPolicyTrainer(unittest.TestCase):
         def test_game_decrease(game):
             # Create "mock" state that ends after 20 moves with the learner losing
             lose_state = [MockState(go.WHITE, 20, size=19)]
-            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
-            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data', 'minimodel_policy.json'))
+            policy1 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
+            policy2 = CNNPolicy.load_model(os.path.join('tests', 'test_data',
+                                                        'minimodel_policy.json'))
             learner = MockPlayer(policy1, game)
             opponent = MockPlayer(policy2, game)
             optimizer = SGD()
