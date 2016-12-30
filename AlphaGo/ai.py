@@ -64,11 +64,15 @@ class GreedyValuePlayer(object):
         # check if there are 'sensible' moves left to do
         if len(sensible_moves) > 0:
             # list with legal moves
-            legal_moves = state.get_legal_moves()
+            legal_moves = [move for move in state.get_legal_moves()]
+
             # generate all possible next states
-            next_state_list = [state.copy().do_move(move) for move in legal_moves]
+            state_list = [state.copy() for _ in legal_moves]
+            for st, mv in zip(state_list, legal_moves):
+                st.do_move(mv) 
+
             # evaluate all possble states
-            evaluate_list = [self.value.eval_state(next_state) for next_state in next_state_list]
+            evaluate_list = [self.value.eval_state(next_state)[0] for next_state in state_list]
             # combine legal_moves and evaluate_list
             move_probs = zip(legal_moves, evaluate_list)
 
@@ -200,11 +204,19 @@ class ProbabilisticValuePlayer(object):
         # check if there are 'sensible' moves left to do
         if len(sensible_moves) > 0:
             # list with legal moves
-            legal_moves = state.get_legal_moves()
+            legal_moves = [move for move in state.get_legal_moves()]
+
             # generate all possible next states
-            next_state_list = [state.copy().do_move(move) for move in legal_moves]
+            state_list = [state.copy() for _ in legal_moves]
+            for st, mv in zip(state_list, legal_moves):
+                st.do_move(mv) 
+
             # evaluate all possble states
-            probabilities = [self.value.eval_state(next_state) for next_state in next_state_list]
+            probabilities = [self.value.eval_state(next_state)[0] for next_state in state_list]
+
+            # TODO right now we have to compensate for tanh output(-1/1)
+            # TODO move to value.py?
+            probabilities = [(prob + 1 ) / 2 for prob in probabilities]
 
             # apply 'temperature' to the distribution
             probabilities = self.apply_temperature(probabilities)
