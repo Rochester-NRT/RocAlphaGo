@@ -69,7 +69,7 @@ class GreedyValuePlayer(object):
             # generate all possible next states
             state_list = [state.copy() for _ in legal_moves]
             for st, mv in zip(state_list, legal_moves):
-                st.do_move(mv) 
+                st.do_move(mv)
 
             # evaluate all possble states
             evaluate_list = [self.value.eval_state(next_state)[0] for next_state in state_list]
@@ -209,14 +209,14 @@ class ProbabilisticValuePlayer(object):
             # generate all possible next states
             state_list = [state.copy() for _ in legal_moves]
             for st, mv in zip(state_list, legal_moves):
-                st.do_move(mv) 
+                st.do_move(mv)
 
             # evaluate all possble states
             probabilities = [self.value.eval_state(next_state)[0] for next_state in state_list]
 
             # TODO right now we have to compensate for tanh output(-1/1)
             # TODO move to value.py?
-            probabilities = [(prob + 1 ) / 2 for prob in probabilities]
+            probabilities = [(prob + 1) / 2 for prob in probabilities]
 
             # apply 'temperature' to the distribution
             probabilities = self.apply_temperature(probabilities)
