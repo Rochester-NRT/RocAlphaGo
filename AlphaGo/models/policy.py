@@ -71,7 +71,7 @@ class CNNPolicy(NeuralNetBase):
         - input_dim:             depth of features to be processed by first layer (no default)
         - board:                 width of the go board to be processed (default 19)
         - filters_per_layer:     number of filters used on every layer (default 128)
-        - filters_per_layer_K:   (where K is between 1 and <layers>) number of filters 
+        - filters_per_layer_K:   (where K is between 1 and <layers>) number of filters
                                  used on layer K (default #filters_per_layer)
         - layers:                number of convolutional steps (default 12)
         - filter_width_K:        (where K is between 1 and <layers>) width of filter on
