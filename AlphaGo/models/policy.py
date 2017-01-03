@@ -71,10 +71,12 @@ class CNNPolicy(NeuralNetBase):
         - input_dim:             depth of features to be processed by first layer (no default)
         - board:                 width of the go board to be processed (default 19)
         - filters_per_layer:     number of filters used on every layer (default 128)
+        - filters_per_layer_K:   (where K is between 1 and <layers>) number of filters 
+                                 used on layer K (default #filters_per_layer)
         - layers:                number of convolutional steps (default 12)
         - filter_width_K:        (where K is between 1 and <layers>) width of filter on
-                                layer K (default 3 except 1st layer which defaults to 5).
-                                Must be odd.
+                                 layer K (default 3 except 1st layer which defaults to 5).
+                                 Must be odd.
         """
         defaults = {
             "board": 19,
@@ -106,8 +108,13 @@ class CNNPolicy(NeuralNetBase):
             # use filter_width_K if it is there, otherwise use 3
             filter_key = "filter_width_%d" % i
             filter_width = params.get(filter_key, 3)
+
+            # use filters_per_layer_K if it is there, otherwise use default value
+            filter_count_key = "filters_per_layer_%d" % i
+            filter_nb = params.get(filter_count_key, params["filters_per_layer"])
+
             network.add(convolutional.Convolution2D(
-                nb_filter=params["filters_per_layer"],
+                nb_filter=filter_nb,
                 nb_row=filter_width,
                 nb_col=filter_width,
                 init='uniform',
