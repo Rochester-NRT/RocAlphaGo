@@ -74,7 +74,7 @@ class threading_shuffled_hdf5_batch_generator:
         if not self.validation:
             np.random.shuffle(self.indices)
 
-    def __init__(self, state_dataset, action_dataset, indices, batch_size, metadata,
+    def __init__(self, state_dataset, action_dataset, indices, batch_size, metadata=None,
                  validation=False):
         self.action_dataset = action_dataset
         self.state_dataset = state_dataset
@@ -83,13 +83,21 @@ class threading_shuffled_hdf5_batch_generator:
         self.indices_max = len(indices)
         self.validation = validation
         self.batch_size = batch_size
-        self.metadata = metadata
         self.indices = indices
+
+        if metadata is not None:
+            self.metadata = metadata
+        else:
+            # create metadata object
+            self.metadata = {
+                "generator_seed": None,
+                "generator_sample": 0
+            }
 
         # shuffle indices
         # when restarting generator_seed and generator_batch will
         # reset generator to the same point as before
-        self.shuffle_indices(metadata['generator_seed'], metadata['generator_sample'])
+        self.shuffle_indices(self.metadata['generator_seed'], self.metadata['generator_sample'])
 
     def __iter__(self):
         return self
@@ -99,7 +107,7 @@ class threading_shuffled_hdf5_batch_generator:
         with self.data_lock:
 
             # get next training sample
-            training_sample = self.indices[self.metadata['generator_sample'],:]
+            training_sample = self.indices[self.metadata['generator_sample'], :]
             # get state
             state = self.state_dataset[training_sample[0]]
             # get action
@@ -120,7 +128,7 @@ class threading_shuffled_hdf5_batch_generator:
         Ybatch = np.zeros(self.batch_size)
 
         for batch_idx in xrange(self.batch_size):
-            state,action,transformation = self.next_indice()
+            state, action, transformation = self.next_indice()
 
             # get rotation symmetry belonging to state
             transform = BOARD_TRANSFORMATIONS[transformation]
@@ -611,16 +619,10 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
         = load_train_val_test_indices(verbose, metadata['symmetries'], len(dataset["states"]),
                                       metadata["batch_size"], out_directory)
 
-    validation_metadata = {
-            "generator_seed": None,
-            "generator_sample": 0
-        }
-
     # create dataset generators
     train_data_generator = threading_shuffled_hdf5_batch_generator(
         dataset["states"],
         dataset["winners"],
-        #train_data_iterator,
         train_indices,
         metadata["batch_size"],
         metadata)
@@ -629,7 +631,6 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
         dataset["winners"],
         val_indices,
         metadata["batch_size"],
-        validation_metadata,
         validation=True)
 
     # check if step decay has to be applied
@@ -659,9 +660,7 @@ def train(metadata, out_directory, verbose, weight_file, meta_file):
         nb_epoch=(metadata["epochs"] - len(metadata["epoch_logs"])),
         callbacks=[meta_writer, lr_scheduler_callback],
         validation_data=val_data_generator,
-        nb_val_samples=len(val_indices),
-        nb_worker=2,
-        pickle_safe=False)
+        nb_val_samples=len(val_indices))
 
 
 def start_training(args):
@@ -761,6 +760,7 @@ def resume_training(args):
 def handle_arguments(cmd_line_args=None):
     """Run training. command-line args may be passed in as a list
     """
+
     import argparse
     parser = argparse.ArgumentParser(description='Perform reinforcement training on a value network.')  # noqa: E501
     # subparser is always first argument

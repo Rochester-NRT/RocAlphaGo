@@ -1,15 +1,15 @@
-from AlphaGo.ai import ProbabilisticPolicyPlayer
-from AlphaGo.go import GameState
-from AlphaGo.go import WHITE
-from AlphaGo.go import BLACK
-from AlphaGo.models.policy import CNNPolicy
-from AlphaGo.preprocessing.preprocessing import Preprocess
-from AlphaGo.util import save_gamestate_to_sgf
-import h5py
-import numpy as np
 import os
 import sys
+import h5py
 import warnings
+import numpy as np
+from AlphaGo.go import WHITE
+from AlphaGo.go import BLACK
+from AlphaGo.go import GameState
+from AlphaGo.models.policy import CNNPolicy
+from AlphaGo.util import save_gamestate_to_sgf
+from AlphaGo.ai import ProbabilisticPolicyPlayer
+from AlphaGo.preprocessing.preprocessing import Preprocess
 
 # default settings
 DEFAULT_N_TRAINING_PAIRS = 30000000

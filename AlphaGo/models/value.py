@@ -1,7 +1,8 @@
-from keras.layers import convolutional, Dense
-from keras.layers.core import Flatten
+import numpy as np
 from keras.models import Sequential
+from keras.layers.core import Flatten
 from nn_util import NeuralNetBase, neuralnet
+from keras.layers import convolutional, Dense
 
 
 @neuralnet
@@ -12,13 +13,13 @@ class CNNValue(NeuralNetBase):
 
     def normalize(self, nn_output, percentage):
         # value network has tanh output (-1/1)
-        # convert to (0/1) or (0/100) 
+        # convert to (0/1) or (0/100)
         if percentage:
             # convert to range (0/100)
-            values = [(value[0] + 1.) / 2. * 100 for value in nn_output  ]
+            values = [(value[0] + 1.) / 2. * 100 for value in nn_output]
         else:
             # convert to range (0/1)
-            values = [(value[0] + 1.) / 2. for value in nn_output  ]
+            values = [(value[0] + 1.) / 2. for value in nn_output]
 
         return values
 
@@ -81,7 +82,7 @@ class CNNValue(NeuralNetBase):
         # create first layer
         network.add(convolutional.Convolution2D(
             input_shape=(params["input_dim"], params["board"], params["board"]),
-            nb_filter=params["filters_per_layer"],
+            nb_filter=params.get("filters_per_layer_1", params["filters_per_layer"]),
             nb_row=params["filter_width_1"],
             nb_col=params["filter_width_1"],
             init='uniform',
