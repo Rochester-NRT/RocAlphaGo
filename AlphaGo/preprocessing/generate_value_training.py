@@ -316,7 +316,7 @@ def handle_arguments(cmd_line_args=None):
 
     # generate data
     generate_data(player_RL, player_SL, args.outfile, args.n_training_pairs, args.batch_size,
-                  policy_SL.model.input_shape[2], features, args.verbose, args.sgf_path)
+                  policy_SL.model.input_shape[-1], features, args.verbose, args.sgf_path)
 
 
 if __name__ == '__main__':

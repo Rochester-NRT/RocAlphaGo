@@ -72,7 +72,7 @@ class GreedyValuePlayer(object):
                 st.do_move(mv)
 
             # evaluate all possble states
-            evaluate_list = [self.value.eval_state(next_state)[0] for next_state in state_list]
+            evaluate_list = [self.value.eval_state(next_state) for next_state in state_list]
             # combine legal_moves and evaluate_list
             move_probs = zip(legal_moves, evaluate_list)
 
@@ -212,11 +212,7 @@ class ProbabilisticValuePlayer(object):
                 st.do_move(mv)
 
             # evaluate all possble states
-            probabilities = [self.value.eval_state(next_state)[0] for next_state in state_list]
-
-            # TODO right now we have to compensate for tanh output(-1/1)
-            # TODO move to value.py?
-            probabilities = [(prob + 1) / 2 for prob in probabilities]
+            probabilities = [self.value.eval_state(next_state) for next_state in state_list]
 
             # apply 'temperature' to the distribution
             probabilities = self.apply_temperature(probabilities)
