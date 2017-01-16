@@ -5,7 +5,7 @@ import unittest
 
 class TestSupervisedPolicyTrainer(unittest.TestCase):
     def testTrain(self):
-        model = 'tests/test_data/minimodel.json'
+        model = 'tests/test_data/minimodel_policy.json'
         data = 'tests/test_data/hdf5/alphago-vs-lee-sedol-features.hdf5'
         output = 'tests/test_data/.tmp.training/'
         args = [model, data, output, '--epochs', '1']
