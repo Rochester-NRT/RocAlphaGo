@@ -27,7 +27,7 @@ class GreedyPolicyPlayer(object):
 
         # list with sensible moves
         sensible_moves = [move for move in state.get_legal_moves(include_eyes=False)]
-        
+
         # check if there are sensible moves left to do
         if len(sensible_moves) > 0:
             move_probs = self.policy.eval_state(state, sensible_moves)
@@ -77,7 +77,7 @@ class ProbabilisticPolicyPlayer(object):
 
         # list with 'sensible' moves
         sensible_moves = [move for move in state.get_legal_moves(include_eyes=False)]
-        
+
         # check if there are 'sensible' moves left to do
         if len(sensible_moves) > 0:
             move_probs = self.policy.eval_state(state, sensible_moves)
@@ -123,7 +123,8 @@ class ProbabilisticGreedyPolicyPlayer(object):
     (high temperature) or towards greedy play (low temperature)
     """
 
-    def __init__(self, policy_function, temperature=1.0, pass_when_offered=False, move_limit=None, greedy_start=10):
+    def __init__(self, policy_function, temperature=1.0, pass_when_offered=False,
+                 move_limit=None, greedy_start=10):
         assert(temperature > 0.0)
         self.policy = policy_function
         self.move_limit = move_limit
@@ -154,11 +155,11 @@ class ProbabilisticGreedyPolicyPlayer(object):
             move_probs = self.policy.eval_state(state, sensible_moves)
 
             if len(state.history) > self.greedy_start:
-                #greedy
+                # greedy
                 max_prob = max(move_probs, key=itemgetter(1))
                 return max_prob[0]
             else:
-                #probabilistic
+                # probabilistic
                 # zip(*list) is like the 'transpose' of zip;
                 # zip(*zip([1,2,3], [4,5,6])) is [(1,2,3), (4,5,6)]
                 moves, probabilities = zip(*move_probs)
@@ -188,16 +189,17 @@ class MCTSPlayer(object):
 
 
 AI_LIST = {
-    # "valuegreedy" : GreedyValuePlayer,
-    "policygreedy" : GreedyPolicyPlayer,
-    # "rolloutgreedy" : GreedyRolloutPlayer,
-    # "valueboth" : ProbabilisticGreedyValuePlayer,
-    "policyboth" : ProbabilisticGreedyPolicyPlayer,
-    # "rolloutboth" : ProbabilisticGreedyRolloutPlayer,
-    # "valueprobabilistic" : ProbabilisticValuePlayer,
-    "policyprobabilistic" : ProbabilisticPolicyPlayer
-    # "rolloutprobabilistic" : ProbabilisticRolloutPlayer
+    # "valuegreedy": GreedyValuePlayer,
+    "policygreedy": GreedyPolicyPlayer,
+    # "rolloutgreedy": GreedyRolloutPlayer,
+    # "valueboth": ProbabilisticGreedyValuePlayer,
+    "policyboth": ProbabilisticGreedyPolicyPlayer,
+    # "rolloutboth": ProbabilisticGreedyRolloutPlayer,
+    # "valueprobabilistic": ProbabilisticValuePlayer,
+    "policyprobabilistic": ProbabilisticPolicyPlayer
+    # "rolloutprobabilistic": ProbabilisticRolloutPlayer
 }
+
 
 def create_gtp(cmd_line_args=None):
     """Run gtp player.
@@ -214,7 +216,6 @@ def create_gtp(cmd_line_args=None):
     parser.add_argument("--move-switch", help="Moves played with probabilistic before switching between player-type to greedy. (player-type 'both' only) (Default: 10)", type=int, default=10)  # noqa: E501
     parser.add_argument("--move-limit", help="Amount of moves before auto pass", type=int, default=None)  # noqa: E501
     parser.add_argument("--pass-when-offered", help="Turn on Accept_pass_when_offered mode.(only after move 100) (Default: False)", default=False, action="store_true")  # noqa: E501
-
 
     if cmd_line_args is None:
         args = parser.parse_args()
@@ -261,6 +262,7 @@ def create_gtp(cmd_line_args=None):
     # start gtp
     from interface.gtp_wrapper import run_gtp
     run_gtp(player)
+
 
 if __name__ == '__main__':
     create_gtp()
