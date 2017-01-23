@@ -115,7 +115,7 @@ class ProbabilisticPolicyPlayer(object):
             if len(move_probs) == 0 or len(states[i].history) > self.move_limit:
                 move_list[i] = go.PASS_MOVE
             else:
-                if self.greedy_start is not None and len(state.history) >= self.greedy_start:
+                if self.greedy_start is not None and len(states[i].history) >= self.greedy_start:
                     # greedy
 
                     max_prob = max(move_probs, key=itemgetter(1))
