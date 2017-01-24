@@ -102,7 +102,7 @@ class TestResnetPolicy(unittest.TestCase):
         os.remove(weights_file2)
 
 
-class TestPlayers(unittest.TestCase):
+class TestPolicyPlayers(unittest.TestCase):
 
     def test_greedy_player(self):
         gs = GameState()
