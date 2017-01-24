@@ -124,9 +124,10 @@ class ProbabilisticPolicyPlayer(object):
                     # probabilistic
 
                     moves, probabilities = zip(*move_probs)
-                    probabilities = np.array(probabilities)
-                    probabilities = probabilities ** self.beta
-                    probabilities = probabilities / probabilities.sum()
+                    # apply 'temperature' to the distribution
+                    probabilities = self.apply_temperature(probabilities)
+                    # numpy interprets a list of tuples as 2D, so we must choose an
+                    # _index_ of moves then apply it in 2 steps
                     choice_idx = np.random.choice(len(moves), p=probabilities)
                     move_list[i] = moves[choice_idx]
         return move_list
