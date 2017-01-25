@@ -1,5 +1,5 @@
 from AlphaGo.ai import ProbabilisticPolicyPlayer
-from AlphaGo.ai import ProbabilisticValuePlayer
+from AlphaGo.ai import ValuePlayer
 import numpy as np
 import unittest
 
@@ -42,8 +42,8 @@ class TestProbabilisticValuePlayer(unittest.TestCase):
         def entropy(distribution):
             distribution = np.array(distribution).flatten()
             return -np.dot(np.log(distribution), distribution.T)
-        player_low = ProbabilisticValuePlayer(None, temperature=0.9)
-        player_high = ProbabilisticValuePlayer(None, temperature=1.1)
+        player_low = ValuePlayer(None, temperature=0.9)
+        player_high = ValuePlayer(None, temperature=1.1)
 
         distribution = np.random.random(361)
         distribution = distribution / distribution.sum()
@@ -56,8 +56,8 @@ class TestProbabilisticValuePlayer(unittest.TestCase):
         self.assertLess(low_entropy, base_entropy)
 
     def test_extreme_temperature_is_numerically_stable(self):
-        player_low = ProbabilisticValuePlayer(None, temperature=1e-12)
-        player_high = ProbabilisticValuePlayer(None, temperature=1e+12)
+        player_low = ValuePlayer(None, temperature=1e-12)
+        player_high = ValuePlayer(None, temperature=1e+12)
 
         distribution = np.random.random(361)
         distribution = distribution / distribution.sum()

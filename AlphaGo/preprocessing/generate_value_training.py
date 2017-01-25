@@ -37,7 +37,8 @@ def init_hdf5(h5f, n_features, bd_size):
             # 'None' dimension allows it to grow arbitrarily
             exact=False,
             # allow non-uint8 datasets to be loaded, coerced to uint8
-            chunks=(1024, n_features, bd_size, bd_size),
+            # TODO chunk size influences speed a lot, find out what high and low values do exactly
+            chunks=(1, n_features, bd_size, bd_size),
             # approximately 10MB chunks (bigger for more compression,
             # OK because accessed *in order*)
             compression="lzf")
@@ -177,7 +178,7 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
     # initialize a new hdf5 file
     h5_states, h5_winners = init_hdf5(h5f, n_features, bd_size)
 
-    # random move distribution
+    # random move distribution administration
     distribution = {key: 0 for key in range(DEAULT_RANDOM_MOVE)}
 
     if verbose:
@@ -254,10 +255,8 @@ def handle_arguments(cmd_line_args=None):
                                      'network are generated from the outcome in each '
                                      'games, following an off-policy, uniform random move')
     # required arguments
-    parser.add_argument("SL_weights_path", help="Path to file with supervised "
-                        "learning policy weights.")
-    parser.add_argument("RL_weights_path", help="Path to file with reinforcement "
-                        "learning policy weights.")
+    parser.add_argument("SL_weights_path", help="Path to file with supervised learning policy weights.")  # noqa: E501
+    parser.add_argument("RL_weights_path", help="Path to file with reinforcement learning policy weights.")  # noqa: E501
     parser.add_argument("model_path", help="Path to network architecture file.")
     # optional arguments
     parser.add_argument("--verbose", "-v", help="Turn on verbose mode", default=False, action="store_true")  # noqa: E501
@@ -308,6 +307,7 @@ def handle_arguments(cmd_line_args=None):
     policy_RL = CNNPolicy.load_model(args.model_path)
     policy_RL.model.load_weights(args.RL_weights_path)
     # Create RL player
+    # TODO is it better to use greedy player?
     player_RL = ProbabilisticPolicyPlayer(policy_RL, temperature=args.rl_temperature,
                                           move_limit=DEFAULT_MAX_GAME_DEPTH)
 
