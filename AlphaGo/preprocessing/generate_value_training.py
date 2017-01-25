@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import h5py
 import warnings
 import numpy as np
@@ -17,9 +18,9 @@ DEFAULT_MAX_GAME_DEPTH = 500
 # play more random
 DEFAULT_TEMPERATURE_SL = 1.4
 # play greedy
-DEFAULT_TEMPERATURE_RL = .0001
+DEFAULT_TEMPERATURE_RL = 1e-12
 DEFAULT_BATCH_SIZE = 10
-DEAULT_RANDOM_MOVE = 450
+DEAULT_RANDOM_MOVE = 10
 DEFAULT_FILE_NAME = "value_planes.hdf5"
 
 # output values for win and lose
@@ -38,7 +39,7 @@ def init_hdf5(h5f, n_features, bd_size):
             exact=False,
             # allow non-uint8 datasets to be loaded, coerced to uint8
             # TODO chunk size influences speed a lot, find out what high and low values do exactly
-            chunks=(1, n_features, bd_size, bd_size),
+            chunks=(1024, n_features, bd_size, bd_size),
             # approximately 10MB chunks (bigger for more compression,
             # OK because accessed *in order*)
             compression="lzf")
@@ -101,18 +102,26 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
     preprocessor = Preprocess(features)
     states = [GameState() for _ in xrange(batch_size)]
 
+    tCur = time.time()
+
     # play player_SL moves
     for _ in xrange(i_rand_move - 1):
         # Get moves (batch)
         batch_moves = player_SL.get_moves(states)
+        tMov = time.time()
         # Do moves (black)
         states = do_move(states, batch_moves)
+        print( "all states a move " + str( tMov - tCur) + "" + str( time.time() - tMov))
+        tCur = time.time()
 
     # remove games that are finished
     states = [state for state in states if not state.is_end_of_game]
 
     # Make random move
     states_list, states = do_rand_move(states)
+
+    print( "all states random move " + str( time.time() - tCur))
+    tCur = time.time()
 
     # color is random move player color
     color = WHITE if i_rand_move % 2 == 0 else BLACK
@@ -126,6 +135,9 @@ def play_batch(player_RL, player_SL, batch_size, features, i_rand_move, next_idx
 
         # check if all games are finished
         done = [st.is_end_of_game for st in states]
+
+        print( "all states end moves " + str( time.time() - tCur))
+        tCur = time.time()
 
         if all(done):
             break
@@ -179,6 +191,8 @@ def generate_data(player_RL, player_SL, hdf5_file, n_training_pairs,
     h5_states, h5_winners = init_hdf5(h5f, n_features, bd_size)
 
     # random move distribution administration
+    # keep track of random distribution and how many actually are generated
+    # TODO used for debugging, decide if we want to keep it
     distribution = {key: 0 for key in range(DEAULT_RANDOM_MOVE)}
 
     if verbose:
@@ -307,7 +321,8 @@ def handle_arguments(cmd_line_args=None):
     policy_RL = CNNPolicy.load_model(args.model_path)
     policy_RL.model.load_weights(args.RL_weights_path)
     # Create RL player
-    # TODO is it better to use greedy player?
+    # TODO decide if we want to use greedy play? instead of probabilistic
+    # could also be done with a RL_greedy argument..
     player_RL = ProbabilisticPolicyPlayer(policy_RL, temperature=args.rl_temperature,
                                           move_limit=DEFAULT_MAX_GAME_DEPTH)
 
