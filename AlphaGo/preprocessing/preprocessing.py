@@ -1,16 +1,39 @@
 import numpy as np
 import AlphaGo.go as go
 import keras.backend as K
+from AlphaGo.preprocessing.caching import lru_cache
 
 # This file is used anywhere that neural net features are used; setting the keras dimension ordering
 # here makes it universal to the project.
 K.set_image_dim_ordering('th')
 
 ##
+# keying functions for state caching begin here
+##
+
+_CACHE_SIZE = 1e6
+
+
+def board_only(state):
+    return (state.size, state.current_hash)
+
+
+def board_and_player(state):
+    return (state.size, state.current_hash, state.current_player)
+
+
+def board_and_n_history(n):
+    def get_key(state):
+        range_start = max(0, len(state.history) - n)
+        return board_only(state) + tuple(state.history[range_start:])
+    return get_key
+
+##
 # individual feature functions (state --> tensor) begin here
 ##
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_board(state):
     """A feature encoding WHITE BLACK and EMPTY on separate planes, but plane 0
     always refers to the current player and plane 1 to the opponent
@@ -22,6 +45,9 @@ def get_board(state):
     return planes
 
 
+# TODO - this is only approximate since history prior to the last n moves may affect whether a given
+# stone is still alive. Need to test whether this causes problems.
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_n_history)
 def get_turns_since(state, maximum=8):
     """A feature encoding the age of the stone at each location up to 'maximum'
 
@@ -37,6 +63,7 @@ def get_turns_since(state, maximum=8):
     return planes
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_only)
 def get_liberties(state, maximum=8):
     """A feature encoding the number of liberties of the group connected to the stone at
     each location
@@ -56,6 +83,7 @@ def get_liberties(state, maximum=8):
     return planes
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_capture_size(state, maximum=8):
     """A feature encoding the number of opponent stones that would be captured by
     playing at each location, up to 'maximum'
@@ -66,7 +94,6 @@ def get_capture_size(state, maximum=8):
       greater than or equal to maximum-1
     - the 0th plane is used for legal moves that would not result in capture
     - illegal move locations are all-zero features
-
     """
     planes = np.zeros((maximum, state.size, state.size))
     for (x, y) in state.get_legal_moves():
@@ -86,10 +113,10 @@ def get_capture_size(state, maximum=8):
     return planes
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_self_atari_size(state, maximum=8):
     """A feature encoding the size of the own-stone group that is put into atari by
     playing at a location
-
     """
     planes = np.zeros((maximum, state.size, state.size))
 
@@ -126,6 +153,7 @@ def get_self_atari_size(state, maximum=8):
     return planes
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_liberties_after(state, maximum=8):
     """A feature encoding what the number of liberties *would be* of the group connected to
     the stone *if* played at a location
@@ -169,6 +197,7 @@ def get_liberties_after(state, maximum=8):
     return planes
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_ladder_capture(state):
     """A feature wrapping GameState.is_ladder_capture().
     """
@@ -178,6 +207,7 @@ def get_ladder_capture(state):
     return feature
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_ladder_escape(state):
     """A feature wrapping GameState.is_ladder_escape().
     """
@@ -187,6 +217,7 @@ def get_ladder_escape(state):
     return feature
 
 
+@lru_cache(max_size=_CACHE_SIZE, key_fn=board_and_player)
 def get_sensibleness(state):
     """A move is 'sensible' if it is legal and if it does not fill the current_player's own eye
     """
@@ -196,6 +227,7 @@ def get_sensibleness(state):
     return feature
 
 
+# Note: no caching on get_legal because of ko and superko.
 def get_legal(state):
     """Zero at all illegal moves, one at all legal moves. Unlike sensibleness, no eye check is done
     """
@@ -209,50 +241,62 @@ def get_legal(state):
 FEATURES = {
     "board": {
         "size": 3,
+        "mask_legal": False,
         "function": get_board
     },
     "ones": {
         "size": 1,
+        "mask_legal": False,
         "function": lambda state: np.ones((1, state.size, state.size))
     },
     "turns_since": {
         "size": 8,
+        "mask_legal": False,
         "function": get_turns_since
     },
     "liberties": {
         "size": 8,
+        "mask_legal": False,
         "function": get_liberties
     },
     "capture_size": {
         "size": 8,
+        "mask_legal": True,
         "function": get_capture_size
     },
     "self_atari_size": {
         "size": 8,
+        "mask_legal": True,
         "function": get_self_atari_size
     },
     "liberties_after": {
         "size": 8,
+        "mask_legal": True,
         "function": get_liberties_after
     },
     "ladder_capture": {
         "size": 1,
+        "mask_legal": True,
         "function": get_ladder_capture
     },
     "ladder_escape": {
         "size": 1,
+        "mask_legal": True,
         "function": get_ladder_escape
     },
     "sensibleness": {
         "size": 1,
+        "mask_legal": True,
         "function": get_sensibleness
     },
     "zeros": {
         "size": 1,
+        "mask_legal": False,
         "function": lambda state: np.zeros((1, state.size, state.size))
     },
     "legal": {
         "size": 1,
+        "mask_legal": False,
         "function": get_legal
     }
 }
@@ -275,11 +319,10 @@ class Preprocess(object):
 
         self.output_dim = 0
         self.feature_list = feature_list
-        self.processors = [None] * len(feature_list)
         for i in range(len(feature_list)):
             feat = feature_list[i].lower()
+            feature_list[i] = feat
             if feat in FEATURES:
-                self.processors[i] = FEATURES[feat]["function"]
                 self.output_dim += FEATURES[feat]["size"]
             else:
                 raise ValueError("uknown feature: %s" % feat)
@@ -287,7 +330,21 @@ class Preprocess(object):
     def state_to_tensor(self, state):
         """Convert a GameState to a Theano-compatible tensor
         """
-        feat_tensors = [proc(state) for proc in self.processors]
+        legal_mask = get_legal(state)
+        feat_tensors = [None] * len(self.feature_list)
+        for i, feature in enumerate(self.feature_list):
+            if feature == "legal":
+                feat_tensors[i] = legal_mask
+            else:
+                # Compute (or look up cached) value of this feature.
+                one_hot_feature = FEATURES[feature]["function"](state)
+                # (Maybe) zero-out any feature values on illegal positions.
+                if FEATURES[feature]["mask_legal"]:
+                    # Note: in numpy, multiplying the feature with size (n, w, w) with a 'mask' of
+                    # size (1, w, w) will repeat the mask along the 0th dimension and do element-
+                    # wise multiplication.
+                    one_hot_feature *= legal_mask
+                feat_tensors[i] = one_hot_feature
 
         # concatenate along feature dimension then add in a singleton 'batch' dimension
         f, s = self.output_dim, state.size
